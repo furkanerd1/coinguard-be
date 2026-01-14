@@ -6,7 +6,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update  # TODO: replace with Flyway after schema stabilizes
+      ddl-auto: update # TODO: replace with Flyway after schema stabilizes
     open-in-view: false
     properties:
       hibernate:

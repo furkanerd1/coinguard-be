@@ -48,6 +48,10 @@ public class Wallet extends BaseEntity {
     @Column(name = "last_reset_date")
     private LocalDate lastResetDate;
 
+    /**
+     * Deducts amount from balance.
+     * Throws exception if balance is insufficient or amount is invalid.
+     */
     public void debit(BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Amount must be positive");
@@ -58,6 +62,9 @@ public class Wallet extends BaseEntity {
         this.balance = this.balance.subtract(amount);
     }
 
+    /**
+     * Adds amount to wallet balance.
+     */
     public void credit(BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Amount must be positive");
@@ -65,6 +72,9 @@ public class Wallet extends BaseEntity {
         this.balance = this.balance.add(amount);
     }
 
+    /**
+     * Checks if balance is enough for the transaction.
+     */
     public boolean hasSufficientBalance(BigDecimal amount) {
         return this.balance.compareTo(amount) >= 0;
     }

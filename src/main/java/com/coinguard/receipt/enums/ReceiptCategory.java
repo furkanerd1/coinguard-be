@@ -1,4 +1,4 @@
-package com.coinguard.common.enums;
+package com.coinguard.receipt.enums;
 
 public enum ReceiptCategory {
     FOOD_BEVERAGE,

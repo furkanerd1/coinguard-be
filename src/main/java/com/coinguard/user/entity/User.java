@@ -1,7 +1,7 @@
 package com.coinguard.user.entity;
 
 import com.coinguard.common.entity.BaseEntity;
-import com.coinguard.common.enums.UserRole;
+import com.coinguard.user.enums.UserRole;
 import com.coinguard.wallet.entity.Wallet;
 import jakarta.persistence.*;
 import lombok.*;

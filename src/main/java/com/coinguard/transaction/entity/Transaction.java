@@ -2,12 +2,11 @@ package com.coinguard.transaction.entity;
 
 import com.coinguard.common.entity.BaseEntity;
 import com.coinguard.common.enums.Currency;
-import com.coinguard.common.enums.TransactionStatus;
-import com.coinguard.common.enums.TransactionType;
+import com.coinguard.transaction.enums.TransactionStatus;
+import com.coinguard.transaction.enums.TransactionType;
 import com.coinguard.wallet.entity.Wallet;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -68,6 +67,10 @@ public class Transaction extends BaseEntity {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    /**
+     * Generates a unique reference number before saving to DB.
+     * Ensures idempotency and tracking.
+     */
     @PrePersist
     public void prePersist() {
         if (this.referenceNo == null) {

@@ -1,4 +1,4 @@
-package com.coinguard.common.enums;
+package com.coinguard.transaction.enums;
 
 public enum TransactionType {
     TRANSFER,      // Kullanıcılar arası transfer

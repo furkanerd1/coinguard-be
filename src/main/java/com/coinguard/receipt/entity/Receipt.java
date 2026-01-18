@@ -2,8 +2,8 @@ package com.coinguard.receipt.entity;
 
 import com.coinguard.common.entity.BaseEntity;
 import com.coinguard.common.enums.Currency;
-import com.coinguard.common.enums.ProcessingStatus;
-import com.coinguard.common.enums.ReceiptCategory;
+import com.coinguard.receipt.enums.ProcessingStatus;
+import com.coinguard.receipt.enums.ReceiptCategory;
 import com.coinguard.transaction.entity.Transaction;
 import com.coinguard.wallet.entity.Wallet;
 import jakarta.persistence.*;

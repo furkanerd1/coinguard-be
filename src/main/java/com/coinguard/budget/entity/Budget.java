@@ -1,7 +1,7 @@
 package com.coinguard.budget.entity;
 
 import com.coinguard.common.entity.BaseEntity;
-import com.coinguard.common.enums.ReceiptCategory;
+import com.coinguard.receipt.enums.ReceiptCategory;
 import com.coinguard.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -53,11 +53,19 @@ public class Budget extends BaseEntity {
     @Column(name = "alert_sent")
     private Boolean alertSent = false;
 
-    // Helper methods
+    /**
+     * Calculates how much money is left in the budget.
+     * Formula: Limit - Spent
+     */
     public BigDecimal getRemainingAmount() {
         return limitAmount.subtract(spentAmount);
     }
 
+    /**
+     * Calculates the spending percentage.
+     * Useful for UI progress bars.
+     * @return percentage value (e.g., 75.5)
+     */
     public Double getUsagePercentage() {
         if (limitAmount.compareTo(BigDecimal.ZERO) == 0) {
             return 0.0;
@@ -67,6 +75,9 @@ public class Budget extends BaseEntity {
                 .doubleValue();
     }
 
+    /**
+     * Checks if the spending has exceeded the limit.
+     */
     public boolean isOverBudget() {
         return spentAmount.compareTo(limitAmount) > 0;
     }

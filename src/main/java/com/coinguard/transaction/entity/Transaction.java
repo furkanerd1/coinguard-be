@@ -1,5 +1,6 @@
 package com.coinguard.transaction.entity;
 
+import com.coinguard.common.entity.BaseEntity;
 import com.coinguard.common.enums.Currency;
 import com.coinguard.common.enums.TransactionStatus;
 import com.coinguard.common.enums.TransactionType;
@@ -24,11 +25,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Transaction {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
+public class Transaction extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "from_wallet_id")
@@ -56,7 +54,8 @@ public class Transaction {
     private String description;
 
     @Column(name = "reference_no", nullable = false, unique = true, length = 36)
-    private String referenceNo = UUID.randomUUID().toString();
+    @EqualsAndHashCode.Include
+    private String referenceNo;
 
     @Column(name = "failure_reason", length = 255)
     private String failureReason;
@@ -66,15 +65,13 @@ public class Transaction {
     @Column(nullable = false)
     private Currency currency = Currency.TRY;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
     @PrePersist
     public void prePersist() {
-        this.referenceNo = UUID.randomUUID().toString();
+        if (this.referenceNo == null) {
+            this.referenceNo = UUID.randomUUID().toString();
+        }
     }
 }

@@ -1,15 +1,13 @@
 package com.coinguard.wallet.entity;
 
+import com.coinguard.common.entity.BaseEntity;
 import com.coinguard.common.enums.Currency;
 import com.coinguard.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "wallets", indexes = {
@@ -20,11 +18,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Wallet {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Wallet extends BaseEntity {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
@@ -54,14 +48,6 @@ public class Wallet {
     @Column(name = "last_reset_date")
     private LocalDate lastResetDate;
 
-    @CreationTimestamp
-    @Column(updatable = false, name = "created_at")
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     public void debit(BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Amount must be positive");
@@ -81,5 +67,18 @@ public class Wallet {
 
     public boolean hasSufficientBalance(BigDecimal amount) {
         return this.balance.compareTo(amount) >= 0;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Wallet)) return false;
+        Wallet other = (Wallet) o;
+        return getId() != null && getId().equals(other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

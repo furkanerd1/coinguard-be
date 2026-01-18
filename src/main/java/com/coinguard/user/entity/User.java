@@ -1,13 +1,10 @@
 package com.coinguard.user.entity;
 
+import com.coinguard.common.entity.BaseEntity;
 import com.coinguard.common.enums.UserRole;
 import com.coinguard.wallet.entity.Wallet;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users", indexes = {
@@ -19,16 +16,14 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
+public class User extends BaseEntity {
 
     @Column(unique = true, nullable = false, length = 50)
     private String username;
 
     @Column(unique = true, nullable = false, length = 100)
+    @EqualsAndHashCode.Include
     private String email;
 
     @Column(nullable = false)
@@ -52,12 +47,4 @@ public class User {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Wallet wallet;
-
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
 }

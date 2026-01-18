@@ -1,5 +1,6 @@
 package com.coinguard.receipt.entity;
 
+import com.coinguard.common.entity.BaseEntity;
 import com.coinguard.common.enums.Currency;
 import com.coinguard.common.enums.ProcessingStatus;
 import com.coinguard.common.enums.ReceiptCategory;
@@ -7,8 +8,6 @@ import com.coinguard.transaction.entity.Transaction;
 import com.coinguard.wallet.entity.Wallet;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -25,11 +24,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Receipt {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Receipt extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "wallet_id", nullable = false)
@@ -79,15 +74,19 @@ public class Receipt {
     @Column(name = "error_message", length = 500)
     private String errorMessage;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     @Column(name = "processed_at")
     private LocalDateTime processedAt;
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Receipt)) return false;
+        Receipt other = (Receipt) o;
+        return getId() != null && getId().equals(other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

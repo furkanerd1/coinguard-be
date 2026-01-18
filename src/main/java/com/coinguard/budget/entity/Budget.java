@@ -1,15 +1,13 @@
 package com.coinguard.budget.entity;
 
+import com.coinguard.common.entity.BaseEntity;
 import com.coinguard.common.enums.ReceiptCategory;
 import com.coinguard.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "budgets", indexes = {
@@ -21,11 +19,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Budget {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Budget extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -59,14 +53,6 @@ public class Budget {
     @Column(name = "alert_sent")
     private Boolean alertSent = false;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     // Helper methods
     public BigDecimal getRemainingAmount() {
         return limitAmount.subtract(spentAmount);
@@ -83,5 +69,18 @@ public class Budget {
 
     public boolean isOverBudget() {
         return spentAmount.compareTo(limitAmount) > 0;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Budget)) return false;
+        Budget other = (Budget) o;
+        return getId() != null && getId().equals(other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

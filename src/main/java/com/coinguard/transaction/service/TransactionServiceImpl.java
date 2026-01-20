@@ -1,5 +1,8 @@
 package com.coinguard.transaction.service;
 
+import com.coinguard.common.exception.InsufficientBalanceException;
+import com.coinguard.common.exception.SelfTransferException;
+import com.coinguard.common.exception.TransactionNotFoundException;
 import com.coinguard.common.exception.WalletNotFoundException;
 import com.coinguard.transaction.dto.request.DepositRequest;
 import com.coinguard.transaction.dto.request.TransferRequest;
@@ -14,6 +17,7 @@ import com.coinguard.wallet.entity.Wallet;
 import com.coinguard.wallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,14 +36,14 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional
     public TransactionResponse transfer(Long senderId, TransferRequest request) {
         if (senderId.equals(request.receiverId())) {
-            throw new IllegalArgumentException("Cannot transfer money to yourself");
+            throw new SelfTransferException(senderId);
         }
 
         Wallet senderWallet = findWallet(senderId);
         Wallet receiverWallet = findWallet(request.receiverId());
 
         if(!senderWallet.hasSufficientBalance(request.amount())){
-            throw new IllegalArgumentException("Insufficient balance");
+            throw new InsufficientBalanceException(senderWallet.getBalance());
         }
 
         //State change
@@ -104,12 +108,13 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
     public TransactionResponse withdraw(Long userId, WithdrawRequest request) {
         Wallet wallet = findWallet(userId);
 
         // balance check
         if (!wallet.hasSufficientBalance(request.amount())) {
-            throw new IllegalArgumentException("Insufficient balance for withdrawal");
+            throw new InsufficientBalanceException(wallet.getBalance());
         }
 
         simulateBankLatency();
@@ -136,13 +141,15 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public Page<TransactionResponse> getTransactionHistory(Long userId, int page, int size) {
-        return null;
+        PageRequest pageRequest = PageRequest.of(page, size);
+        return transactionRepository.findTransactionsByUserId(userId, pageRequest)
+                .map(transactionMapper::toTransactionResponse);
     }
 
     @Override
     public TransactionResponse getByReference(String referenceNo) {
         Transaction transaction = transactionRepository.findByReferenceNo(referenceNo)
-                .orElseThrow(() -> new IllegalArgumentException("Transaction not found with reference: " + referenceNo));
+                .orElseThrow(() -> new TransactionNotFoundException(referenceNo));
 
         return transactionMapper.toTransactionResponse(transaction);
     }

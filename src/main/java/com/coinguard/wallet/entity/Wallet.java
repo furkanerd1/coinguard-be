@@ -5,6 +5,7 @@ import com.coinguard.common.enums.Currency;
 import com.coinguard.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,7 +18,7 @@ import java.time.LocalDate;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
+@SuperBuilder
 public class Wallet extends BaseEntity {
 
     @OneToOne(fetch = FetchType.LAZY)
@@ -29,20 +30,25 @@ public class Wallet extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 3)
+    @Builder.Default
     private Currency currency = Currency.TRY;
 
     // CRITICAL: Optimistic Locking for Race Condition protection
     @Version
     @Column(nullable = false)
+    @Builder.Default
     private Long version = 0L;
 
     @Column(name = "is_frozen")
+    @Builder.Default
     private boolean isFrozen = false;
 
     @Column(name = "daily_limit", precision = 19, scale = 2)
+    @Builder.Default
     private BigDecimal dailyLimit = new BigDecimal("10000.00");
 
     @Column(name = "daily_spent", precision = 19, scale = 2)
+    @Builder.Default
     private BigDecimal dailySpent = BigDecimal.ZERO;
 
     @Column(name = "last_reset_date")

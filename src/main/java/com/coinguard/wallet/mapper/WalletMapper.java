@@ -12,5 +12,6 @@ public interface WalletMapper {
 
     @Mapping(source = "user.id", target = "userId")
     @Mapping(source = "user.fullName", target = "userFullName")
+    @Mapping(source = "frozen", target = "isFrozen")
     WalletResponse toWalletResponse(Wallet wallet);
 }

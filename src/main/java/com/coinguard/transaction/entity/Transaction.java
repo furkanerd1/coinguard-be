@@ -40,6 +40,7 @@ public class Transaction extends BaseEntity {
     private BigDecimal amount;
 
     @Column(precision = 19, scale = 2)
+    @Builder.Default
     private BigDecimal fee = BigDecimal.ZERO;
 
     @Enumerated(EnumType.STRING)
@@ -48,6 +49,7 @@ public class Transaction extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
+    @Builder.Default
     private TransactionStatus status = TransactionStatus.PENDING;
 
     @Column(length = 500)
@@ -63,6 +65,7 @@ public class Transaction extends BaseEntity {
     // CRITICAL: Currency must match wallet's currency
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private Currency currency = Currency.TRY;
 
     @Column(name = "completed_at")

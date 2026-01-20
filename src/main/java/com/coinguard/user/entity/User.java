@@ -5,6 +5,7 @@ import com.coinguard.user.enums.UserRole;
 import com.coinguard.wallet.entity.Wallet;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "users", indexes = {
@@ -15,7 +16,7 @@ import lombok.*;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
+@SuperBuilder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class User extends BaseEntity {
 
@@ -36,13 +37,16 @@ public class User extends BaseEntity {
     private String phoneNumber;
 
     @Column(name = "is_active")
+    @Builder.Default
     private boolean isActive=true;
 
     @Column(name = "is_email_verified")
+    @Builder.Default
     private Boolean isEmailVerified = false;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
+    @Builder.Default
     private UserRole role = UserRole.USER;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)

@@ -5,6 +5,7 @@ import com.coinguard.receipt.enums.ReceiptCategory;
 import com.coinguard.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -18,7 +19,7 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class Budget extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -36,6 +37,7 @@ public class Budget extends BaseEntity {
     private BigDecimal limitAmount;
 
     @Column(name = "spent_amount", precision = 19, scale = 2)
+    @Builder.Default
     private BigDecimal spentAmount = BigDecimal.ZERO;
 
     @Column(name = "period_start", nullable = false)
@@ -45,12 +47,15 @@ public class Budget extends BaseEntity {
     private LocalDate periodEnd;
 
     @Column(name = "is_active")
+    @Builder.Default
     private Boolean isActive = true;
 
     @Column(name = "alert_threshold")
+    @Builder.Default
     private Integer alertThreshold = 80;
 
     @Column(name = "alert_sent")
+    @Builder.Default
     private Boolean alertSent = false;
 
     /**

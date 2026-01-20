@@ -8,6 +8,7 @@ import com.coinguard.transaction.entity.Transaction;
 import com.coinguard.wallet.entity.Wallet;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -23,7 +24,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class Receipt extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -55,6 +56,7 @@ public class Receipt extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(length = 3)
+    @Builder.Default
     private Currency currency=Currency.TRY;
 
     @Enumerated(EnumType.STRING)
@@ -69,6 +71,7 @@ public class Receipt extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
+    @Builder.Default
     private ProcessingStatus status = ProcessingStatus.UPLOADED;
 
     @Column(name = "error_message", length = 500)

@@ -86,7 +86,7 @@ class BudgetServiceImplTest {
         // Mock behaviors
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(budgetRepository.findByUserIdAndCategoryAndIsActiveTrue(userId, request.category()))
-                .thenReturn(Optional.empty()); // Çakışma yok
+                .thenReturn(Optional.empty());
         when(budgetRepository.save(any(Budget.class))).thenReturn(budget);
         when(budgetMapper.toBudgetResponse(budget)).thenReturn(expectedResponse);
 
@@ -117,7 +117,6 @@ class BudgetServiceImplTest {
         // WHEN & THEN
         assertThrows(InvalidBudgetPeriodException.class, () -> budgetService.createBudget(userId, request));
 
-        // Repository'ye hiç gitmemeli
         verifyNoInteractions(userRepository);
         verifyNoInteractions(budgetRepository);
     }

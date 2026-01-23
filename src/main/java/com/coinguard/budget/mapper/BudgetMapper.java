@@ -15,6 +15,7 @@ public interface BudgetMapper {
     @Mapping(target = "remainingAmount", expression = "java(budget.getRemainingAmount())")
     @Mapping(target = "usagePercentage", expression = "java(budget.getUsagePercentage())")
     @Mapping(target = "isExceeded", expression = "java(budget.isOverBudget())")
+    @Mapping(target = "isActive", expression = "java(Boolean.TRUE.equals(budget.getIsActive()))")
     BudgetResponse toBudgetResponse(Budget budget);
 
     List<BudgetResponse> toBudgetResponseList(List<Budget> budgets);

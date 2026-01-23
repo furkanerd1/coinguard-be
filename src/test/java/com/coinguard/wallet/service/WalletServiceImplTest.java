@@ -94,7 +94,7 @@ class WalletServiceImplTest {
         WalletResponse expectedResponse = new WalletResponse(100L, 1L, "Test User", BigDecimal.ZERO, null, null, null, null, false);
 
         when(walletRepository.existsByUserId(user.getId())).thenReturn(false);
-        when(walletRepository.save(any(Wallet.class))).thenReturn(wallet); // save ne dönerse onu al
+        when(walletRepository.save(any(Wallet.class))).thenReturn(wallet);
         when(walletMapper.toWalletResponse(wallet)).thenReturn(expectedResponse);
 
         // WHEN
@@ -125,7 +125,7 @@ class WalletServiceImplTest {
         // GIVEN
         Long userId = 1L;
         Wallet wallet = createDummyWallet(createDummyUser());
-        wallet.setBalance(new BigDecimal("100.00")); // 100 TL var
+        wallet.setBalance(new BigDecimal("100.00"));
 
         when(walletRepository.findByUserId(userId)).thenReturn(Optional.of(wallet));
 
@@ -142,7 +142,7 @@ class WalletServiceImplTest {
         // GIVEN
         Long userId = 1L;
         Wallet wallet = createDummyWallet(createDummyUser());
-        wallet.setBalance(new BigDecimal("20.00")); // 20 TL var
+        wallet.setBalance(new BigDecimal("20.00"));
 
         when(walletRepository.findByUserId(userId)).thenReturn(Optional.of(wallet));
 

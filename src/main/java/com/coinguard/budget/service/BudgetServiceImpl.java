@@ -5,10 +5,7 @@ import com.coinguard.budget.dto.response.BudgetResponse;
 import com.coinguard.budget.entity.Budget;
 import com.coinguard.budget.mapper.BudgetMapper;
 import com.coinguard.budget.repository.BudgetRepository;
-import com.coinguard.common.exception.ActiveBudgetAlreadyExistsException;
-import com.coinguard.common.exception.BudgetNotFoundException;
-import com.coinguard.common.exception.InvalidBudgetPeriodException;
-import com.coinguard.common.exception.UserNotFoundException;
+import com.coinguard.common.exception.*;
 import com.coinguard.user.entity.User;
 import com.coinguard.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -74,7 +71,7 @@ public class BudgetServiceImpl implements BudgetService {
                 .orElseThrow(() -> new BudgetNotFoundException(budgetId));
 
         if (!budget.getUser().getId().equals(userId)) {
-            throw new SecurityException("You are not authorized to delete this budget");
+            throw new AccessDeniedException("You are not authorized to delete this budget");
         }
 
         budgetRepository.delete(budget);

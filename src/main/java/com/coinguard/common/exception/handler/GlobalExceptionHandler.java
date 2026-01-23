@@ -50,7 +50,7 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler({WalletNotFoundException.class, TransactionNotFoundException.class, BudgetNotFoundException.class})
+    @ExceptionHandler({WalletNotFoundException.class, TransactionNotFoundException.class, BudgetNotFoundException.class,UserNotFoundException.class})
     public ResponseEntity<ErrorResponse> handleResourceNotFound(RuntimeException e, HttpServletRequest request) {
         log.warn("Resource not found: {}", e.getMessage());
 
@@ -89,6 +89,20 @@ public class GlobalExceptionHandler {
                         .status(HttpStatus.BAD_REQUEST.value())
                         .error("Insufficient Balance")
                         .message(e.getMessage())
+                        .path(request.getRequestURI())
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        log.warn("Access denied: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                ErrorResponse.builder()
+                        .status(HttpStatus.FORBIDDEN.value())
+                        .error("Forbidden")
+                        .message(ex.getMessage())
                         .path(request.getRequestURI())
                         .timestamp(LocalDateTime.now())
                         .build()

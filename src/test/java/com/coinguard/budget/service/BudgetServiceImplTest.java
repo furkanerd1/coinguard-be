@@ -5,10 +5,7 @@ import com.coinguard.budget.dto.response.BudgetResponse;
 import com.coinguard.budget.entity.Budget;
 import com.coinguard.budget.mapper.BudgetMapper;
 import com.coinguard.budget.repository.BudgetRepository;
-import com.coinguard.common.exception.ActiveBudgetAlreadyExistsException;
-import com.coinguard.common.exception.BudgetNotFoundException;
-import com.coinguard.common.exception.InvalidBudgetPeriodException;
-import com.coinguard.common.exception.UserNotFoundException;
+import com.coinguard.common.exception.*;
 import com.coinguard.receipt.enums.ReceiptCategory;
 import com.coinguard.user.entity.User;
 import com.coinguard.user.repository.UserRepository;
@@ -220,7 +217,7 @@ class BudgetServiceImplTest {
 
         when(budgetRepository.findById(budgetId)).thenReturn(Optional.of(budget));
         // WHEN & THEN
-        assertThrows(SecurityException.class, () -> budgetService.deleteBudget(currentUserId, budgetId));
+        assertThrows(AccessDeniedException.class, () -> budgetService.deleteBudget(currentUserId, budgetId));
 
         verify(budgetRepository, never()).delete(any());
     }

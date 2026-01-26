@@ -1,11 +1,10 @@
 package com.coinguard.common.exception.handler;
 
-import com.coinguard.common.exception.InsufficientBalanceException;
-import com.coinguard.common.exception.SelfTransferException;
-import com.coinguard.common.exception.TransactionNotFoundException;
-import com.coinguard.common.exception.WalletNotFoundException;
+import com.coinguard.common.exception.*;
 import com.coinguard.common.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +22,35 @@ import java.util.Map;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler({WalletNotFoundException.class, TransactionNotFoundException.class})
+    @ExceptionHandler(ActiveBudgetAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleActiveBudgetAlreadyExists(ActiveBudgetAlreadyExistsException ex, HttpServletRequest request) {
+        log.warn("Budget conflict: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ErrorResponse.builder()
+                        .status(HttpStatus.CONFLICT.value())
+                        .error("Conflict")
+                        .message(ex.getMessage())
+                        .path(request.getRequestURI())
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
+    }
+
+    @ExceptionHandler(InvalidBudgetPeriodException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidBudgetPeriod(InvalidBudgetPeriodException ex, HttpServletRequest request) {
+        log.warn("Invalid budget period: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                ErrorResponse.builder()
+                        .status(HttpStatus.BAD_REQUEST.value())
+                        .error("Bad Request")
+                        .message(ex.getMessage())
+                        .path(request.getRequestURI())
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
+    }
+
+    @ExceptionHandler({WalletNotFoundException.class, TransactionNotFoundException.class, BudgetNotFoundException.class,UserNotFoundException.class})
     public ResponseEntity<ErrorResponse> handleResourceNotFound(RuntimeException e, HttpServletRequest request) {
         log.warn("Resource not found: {}", e.getMessage());
 
@@ -63,6 +90,45 @@ public class GlobalExceptionHandler {
                         .error("Insufficient Balance")
                         .message(e.getMessage())
                         .path(request.getRequestURI())
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
+    }
+
+    @ExceptionHandler(AuthorizationException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AuthorizationException ex, HttpServletRequest request) {
+        log.warn("Access denied: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                ErrorResponse.builder()
+                        .status(HttpStatus.FORBIDDEN.value())
+                        .error("Forbidden")
+                        .message(ex.getMessage())
+                        .path(request.getRequestURI())
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException ex, HttpServletRequest request) {
+        log.warn("Constraint validation failed: {}", ex.getMessage());
+
+        Map<String, String> validationErrors = new HashMap<>();
+
+        for (ConstraintViolation<?> violation : ex.getConstraintViolations()) {
+            String propertyPath = violation.getPropertyPath().toString();
+            String fieldName = propertyPath.substring(propertyPath.lastIndexOf('.') + 1);
+
+            validationErrors.put(fieldName, violation.getMessage());
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                ErrorResponse.builder()
+                        .status(HttpStatus.BAD_REQUEST.value())
+                        .error("Validation Error")
+                        .message("Parameter validation failed")
+                        .path(request.getRequestURI())
+                        .validationErrors(validationErrors)
                         .timestamp(LocalDateTime.now())
                         .build()
         );

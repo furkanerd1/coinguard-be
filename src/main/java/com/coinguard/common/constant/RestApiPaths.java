@@ -6,6 +6,8 @@ public final class RestApiPaths {
 
     public static final String API_VERSION_1 = "/api/v1";
 
+    public static final String AUTH = API_VERSION_1 + "/auth";
+
     public static final class Transaction {
         private Transaction() {}
         public static final String CTRL = API_VERSION_1 + "/transactions";

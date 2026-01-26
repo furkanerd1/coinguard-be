@@ -1,9 +1,7 @@
 package com.coinguard.budget.dto.request;
 
 import com.coinguard.receipt.enums.ReceiptCategory;
-import jakarta.validation.constraints.FutureOrPresent;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -24,5 +22,8 @@ public record CreateBudgetRequest(
         @FutureOrPresent(message = "End date cannot be in the past")
         LocalDate periodEnd,
 
+        @NotNull
+        @Min(0)
+        @Max(100)
         Integer alertThreshold
 ){}

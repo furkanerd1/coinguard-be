@@ -49,11 +49,12 @@ class BudgetServiceImplTest {
     }
 
     private CreateBudgetRequest createValidRequest() {
+        LocalDate now = LocalDate.now();
         return new CreateBudgetRequest(
                 ReceiptCategory.FOOD_BEVERAGE,
                 new BigDecimal("5000.00"),
-                LocalDate.now(),
-                LocalDate.now().plusDays(30),
+                now,
+                now.plusDays(30),
                 80
         );
     }
@@ -205,7 +206,7 @@ class BudgetServiceImplTest {
     }
 
     @Test
-    @DisplayName("Should throw SecurityException when user tries to delete someone else's budget")
+    @DisplayName("Should throw AuthorizationException when user tries to delete someone else's budget")
     void shouldThrowException_WhenDeletingOthersBudget() {
         // GIVEN
         Long currentUserId = 1L;
@@ -217,7 +218,7 @@ class BudgetServiceImplTest {
 
         when(budgetRepository.findById(budgetId)).thenReturn(Optional.of(budget));
         // WHEN & THEN
-        assertThrows(AccessDeniedException.class, () -> budgetService.deleteBudget(currentUserId, budgetId));
+        assertThrows(AuthorizationException.class, () -> budgetService.deleteBudget(currentUserId, budgetId));
 
         verify(budgetRepository, never()).delete(any());
     }

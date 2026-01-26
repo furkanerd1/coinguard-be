@@ -26,7 +26,7 @@ public class BudgetController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<BudgetResponse>> createBudget(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") @Positive Long userId,
             @Valid @RequestBody CreateBudgetRequest request) {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(budgetService.createBudget(userId, request)));

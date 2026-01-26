@@ -11,7 +11,7 @@ import java.util.List;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface BudgetMapper {
 
-    @Mapping(target = "userId", source = "budget.user.id")
+    @Mapping(target = "userId", source = "user.id")
     @Mapping(target = "remainingAmount", expression = "java(budget.getRemainingAmount())")
     @Mapping(target = "usagePercentage", expression = "java(budget.getUsagePercentage())")
     @Mapping(target = "isExceeded", expression = "java(budget.isOverBudget())")

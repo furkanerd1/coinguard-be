@@ -71,7 +71,7 @@ public class BudgetServiceImpl implements BudgetService {
                 .orElseThrow(() -> new BudgetNotFoundException(budgetId));
 
         if (!budget.getUser().getId().equals(userId)) {
-            throw new AccessDeniedException("You are not authorized to delete this budget");
+            throw new AuthorizationException("You are not authorized to delete this budget");
         }
 
         budgetRepository.delete(budget);

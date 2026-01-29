@@ -1,5 +1,7 @@
 package com.coinguard.transaction.service;
 
+import com.coinguard.budget.service.BudgetService;
+import com.coinguard.common.enums.TransactionCategory;
 import com.coinguard.common.exception.InsufficientBalanceException;
 import com.coinguard.common.exception.SelfTransferException;
 import com.coinguard.common.exception.TransactionNotFoundException;
@@ -16,42 +18,57 @@ import com.coinguard.transaction.repository.TransactionRepository;
 import com.coinguard.wallet.entity.Wallet;
 import com.coinguard.wallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final WalletRepository walletRepository;
     private final TransactionMapper transactionMapper;
+    private final BudgetService budgetService;
 
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public TransactionResponse transfer(Long senderId, TransferRequest request) {
         if (senderId.equals(request.receiverId())) {
             throw new SelfTransferException(senderId);
         }
 
-        Wallet senderWallet = findWallet(senderId);
-        Wallet receiverWallet = findWallet(request.receiverId());
+        Long firstId = Math.min(senderId, request.receiverId());
+        Long secondId = Math.max(senderId, request.receiverId());
 
-        if(!senderWallet.hasSufficientBalance(request.amount())){
+        Wallet firstWallet = walletRepository.findByUserIdForUpdate(firstId)
+                .orElseThrow(() -> new WalletNotFoundException(firstId));
+
+        Wallet secondWallet = walletRepository.findByUserIdForUpdate(secondId)
+                .orElseThrow(() -> new WalletNotFoundException(secondId));
+
+        Wallet senderWallet = senderId.equals(firstId) ? firstWallet : secondWallet;
+        Wallet receiverWallet = senderId.equals(firstId) ? secondWallet : firstWallet;
+
+        if (!senderWallet.hasSufficientBalance(request.amount())) {
             throw new InsufficientBalanceException(senderWallet.getBalance());
         }
 
-        //State change
-        senderWallet.setBalance(senderWallet.getBalance().subtract(request.amount()));
-        receiverWallet.setBalance(receiverWallet.getBalance().add(request.amount()));
+        senderWallet.debit(request.amount());
+        receiverWallet.credit(request.amount());
 
         walletRepository.save(senderWallet);
         walletRepository.save(receiverWallet);
+
+        TransactionCategory category = request.category() != null ? request.category() : TransactionCategory.OTHER;
 
         Transaction transaction = Transaction.builder()
                 .fromWallet(senderWallet)
@@ -60,86 +77,98 @@ public class TransactionServiceImpl implements TransactionService {
                 .currency(senderWallet.getCurrency())
                 .type(TransactionType.TRANSFER)
                 .status(TransactionStatus.COMPLETED)
+                .category(category)
                 .referenceNo(UUID.randomUUID().toString())
                 .description(request.description())
                 .createdAt(LocalDateTime.now())
+                .completedAt(LocalDateTime.now())
                 .build();
 
-        return transactionMapper.toTransactionResponse(transactionRepository.save(transaction));
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        try {
+            budgetService.trackExpense(senderId, request.amount(), category, LocalDate.now());
+        } catch (Exception e) {
+            log.error("Failed to update budget for transfer: {}", e.getMessage());
+        }
+        return transactionMapper.toTransactionResponse(savedTransaction);
     }
 
-    private Wallet findWallet(Long userId) {
-        return walletRepository.findByUserId(userId)
+    private Wallet findWalletForUpdate(Long userId) {
+        return walletRepository.findByUserIdForUpdate(userId)
                 .orElseThrow(() -> new WalletNotFoundException(userId));
     }
 
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public TransactionResponse deposit(Long userId, DepositRequest request) {
-        Wallet wallet = findWallet(userId);
+        Wallet wallet = findWalletForUpdate(userId);
 
-        simulateBankLatency();
-
-        //State change
-        wallet.setBalance(wallet.getBalance().add(request.amount()));
+        wallet.credit(request.amount());
         walletRepository.save(wallet);
+
+        TransactionCategory category = request.category() != null ? request.category() : TransactionCategory.SALARY;
 
         Transaction transaction = Transaction.builder()
                 .toWallet(wallet)
-                .fromWallet(null) // Dışarıdan geldiği için gönderen yok
+                .fromWallet(null)
                 .amount(request.amount())
                 .currency(wallet.getCurrency())
                 .type(TransactionType.DEPOSIT)
+                .category(category)
                 .status(TransactionStatus.COMPLETED)
                 .referenceNo(UUID.randomUUID().toString())
                 .description("Deposit via " + request.cardNumber())
                 .createdAt(LocalDateTime.now())
+                .completedAt(LocalDateTime.now())
                 .build();
 
         return transactionMapper.toTransactionResponse(transactionRepository.save(transaction));
     }
 
-    private void simulateBankLatency() {
-        try {
-            Thread.sleep(1500); // wait for 1.5 seconds
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
 
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public TransactionResponse withdraw(Long userId, WithdrawRequest request) {
-        Wallet wallet = findWallet(userId);
+        Wallet wallet = findWalletForUpdate(userId);
 
-        // balance check
         if (!wallet.hasSufficientBalance(request.amount())) {
             throw new InsufficientBalanceException(wallet.getBalance());
         }
 
-        simulateBankLatency();
-
-        // state change
-        wallet.setBalance(wallet.getBalance().subtract(request.amount()));
+        wallet.debit(request.amount());
         walletRepository.save(wallet);
 
-        // create transaction record
+        TransactionCategory category = request.category() != null ? request.category() : TransactionCategory.OTHER;
+
+        // Create transaction record
         Transaction transaction = Transaction.builder()
                 .fromWallet(wallet)
                 .toWallet(null)
                 .amount(request.amount())
                 .currency(wallet.getCurrency())
                 .type(TransactionType.WITHDRAWAL)
+                .category(category)
                 .status(TransactionStatus.COMPLETED)
                 .referenceNo(UUID.randomUUID().toString())
                 .description("Withdrawal to " + request.iban())
                 .createdAt(LocalDateTime.now())
+                .completedAt(LocalDateTime.now())
                 .build();
 
-        return transactionMapper.toTransactionResponse(transactionRepository.save(transaction));
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        try {
+            budgetService.trackExpense(userId, request.amount(), category, LocalDate.now());
+        } catch (Exception e) {
+            log.error("Failed to update budget for withdrawal: {}", e.getMessage());
+        }
+
+        return transactionMapper.toTransactionResponse(savedTransaction);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<TransactionResponse> getTransactionHistory(Long userId, int page, int size) {
         PageRequest pageRequest = PageRequest.of(page, size);
         return transactionRepository.findTransactionsByUserId(userId, pageRequest)
@@ -147,6 +176,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public TransactionResponse getByReference(String referenceNo) {
         Transaction transaction = transactionRepository.findByReferenceNo(referenceNo)
                 .orElseThrow(() -> new TransactionNotFoundException(referenceNo));

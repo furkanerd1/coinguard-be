@@ -26,4 +26,11 @@ public final class RestApiPaths {
         private Wallet() {}
         public static final String CTRL = API_VERSION_1 + "/wallets";
     }
+
+    public static final class User {
+        private User() {}
+        public static final String CTRL = API_VERSION_1 + "/users";
+        public static final String LOGGED_IN = "/me";
+        public static final String SEARCH = "/search";
+    }
 }

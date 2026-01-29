@@ -30,30 +30,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // get token from Authorization header
+        // Get token from Authorization header
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String userEmail;
 
-        // if no token present , or token doesn't start with Bearer, continue filter chain
+        // If no token present, or token doesn't start with Bearer, continue filter chain
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
-        // remove "Bearer" prefix , get pure token
+
+        // Remove "Bearer " prefix, get pure token
         jwt = authHeader.substring(7);
-        // get email from token
+
+        // Extract email from token
         userEmail = jwtService.extractEmail(jwt);
 
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            // find user details by email
+            // Find user details by email
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
-            // is token valid for the user
+            // Check if token is valid for the user
             if (jwtService.isTokenValid(jwt, userDetails)) {
 
-                // create auth token
+                // Create authentication token
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
@@ -64,7 +66,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         new WebAuthenticationDetailsSource().buildDetails(request)
                 );
 
-                // update Security Context with the authenticated user
+                // Update Security Context with the authenticated user
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }

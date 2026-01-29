@@ -20,6 +20,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     List<Transaction> findByToWalletIdOrderByCreatedAtDesc(Long toWalletId);
 
-    @Query("SELECT t FROM Transaction t WHERE t.fromWallet.user.id = :userId OR t.toWallet.user.id = :userId ORDER BY t.createdAt DESC")
+    @Query("SELECT t FROM Transaction t " + "LEFT JOIN t.fromWallet fw " + "LEFT JOIN t.toWallet tw " + "WHERE (fw.user.id = :userId OR tw.user.id = :userId) " + "ORDER BY t.createdAt DESC")
     Page<Transaction> findTransactionsByUserId(@Param("userId") Long userId, Pageable pageable);
 }

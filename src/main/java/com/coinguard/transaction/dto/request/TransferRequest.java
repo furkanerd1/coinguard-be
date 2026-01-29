@@ -1,5 +1,6 @@
 package com.coinguard.transaction.dto.request;
 
+import com.coinguard.common.enums.TransactionCategory;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -16,5 +17,7 @@ public record TransferRequest(
         @DecimalMin(value = "1.00", message = "Minimum transfer amount is 1.00")
         BigDecimal amount,
 
-        String description
+        String description,
+
+        TransactionCategory category
 ){}

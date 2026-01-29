@@ -1,5 +1,6 @@
 package com.coinguard.transaction.dto.request;
 
+import com.coinguard.common.enums.TransactionCategory;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
@@ -19,5 +20,7 @@ public record DepositRequest(
         String expiryDate,
 
         @Pattern(regexp = "^[0-9]{3}$", message = "CVC must be 3 digits")
-        String cvc
+        String cvc,
+
+        TransactionCategory category
 ){}

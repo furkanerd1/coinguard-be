@@ -1,6 +1,7 @@
 package com.coinguard.transaction.dto.response;
 
 import com.coinguard.common.enums.Currency;
+import com.coinguard.common.enums.TransactionCategory;
 import com.coinguard.transaction.enums.TransactionStatus;
 import com.coinguard.transaction.enums.TransactionType;
 
@@ -15,6 +16,7 @@ public record TransactionResponse(
         Currency currency,
         TransactionType type,
         TransactionStatus status,
+        TransactionCategory category,
         String referenceNo,
         String description,
         LocalDateTime transactionDate

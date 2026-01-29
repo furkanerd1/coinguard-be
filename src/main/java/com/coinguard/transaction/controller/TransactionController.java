@@ -7,15 +7,16 @@ import com.coinguard.transaction.dto.request.TransferRequest;
 import com.coinguard.transaction.dto.request.WithdrawRequest;
 import com.coinguard.transaction.dto.response.TransactionResponse;
 import com.coinguard.transaction.service.TransactionService;
+import com.coinguard.user.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 
 // todo : swagger docs
-// todo : @RequestHeader("X-User-Id") Long senderId -> get from auth context
 @RestController
 @RequestMapping(RestApiPaths.Transaction.CTRL)
 @RequiredArgsConstructor
@@ -24,36 +25,35 @@ public class TransactionController {
 
     private final TransactionService transactionService;
 
-
     @PostMapping(RestApiPaths.Transaction.TRANSFER)
     public ResponseEntity<ApiResponse<TransactionResponse>> transfer(
-            @RequestHeader("X-User-Id") Long senderId,
+            @AuthenticationPrincipal User currentUser,
             @Valid @RequestBody TransferRequest request) {
 
-        return ResponseEntity.ok(ApiResponse.success(transactionService.transfer(senderId, request)));
+        return ResponseEntity.ok(ApiResponse.success(transactionService.transfer(currentUser.getId(), request)));
     }
 
     @PostMapping(RestApiPaths.Transaction.DEPOSIT)
     public ResponseEntity<ApiResponse<TransactionResponse>> deposit(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal User currentUser,
             @Valid @RequestBody DepositRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(transactionService.deposit(userId, request)));
+        return ResponseEntity.ok(ApiResponse.success(transactionService.deposit(currentUser.getId(), request)));
     }
 
 
     @PostMapping(RestApiPaths.Transaction.WITHDRAW)
     public ResponseEntity<ApiResponse<TransactionResponse>> withdraw(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal User currentUser,
             @Valid @RequestBody WithdrawRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(transactionService.withdraw(userId, request)));
+        return ResponseEntity.ok(ApiResponse.success(transactionService.withdraw(currentUser.getId(), request)));
     }
 
     @GetMapping(RestApiPaths.Transaction.HISTORY)
     public ResponseEntity<ApiResponse<?>> getTransactionHistory(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal User currentUser,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(ApiResponse.success(transactionService.getTransactionHistory(userId, page, size)));
+        return ResponseEntity.ok(ApiResponse.success(transactionService.getTransactionHistory(currentUser.getId(), page, size)));
     }
 
     @GetMapping("/{referenceNo}")

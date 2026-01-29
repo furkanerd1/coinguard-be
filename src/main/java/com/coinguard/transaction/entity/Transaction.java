@@ -2,6 +2,7 @@ package com.coinguard.transaction.entity;
 
 import com.coinguard.common.entity.BaseEntity;
 import com.coinguard.common.enums.Currency;
+import com.coinguard.common.enums.TransactionCategory;
 import com.coinguard.transaction.enums.TransactionStatus;
 import com.coinguard.transaction.enums.TransactionType;
 import com.coinguard.wallet.entity.Wallet;
@@ -51,6 +52,9 @@ public class Transaction extends BaseEntity {
     @Column(nullable = false, length = 20)
     @Builder.Default
     private TransactionStatus status = TransactionStatus.PENDING;
+
+    @Enumerated(EnumType.STRING)
+    private TransactionCategory category;
 
     @Column(length = 500)
     private String description;

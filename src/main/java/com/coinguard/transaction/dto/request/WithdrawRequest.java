@@ -1,5 +1,6 @@
 package com.coinguard.transaction.dto.request;
 
+import com.coinguard.common.enums.TransactionCategory;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
@@ -13,5 +14,7 @@ public record WithdrawRequest(
 
         @NotNull
         @Pattern(regexp = "^TR[0-9]{24}$", message = "Invalid TR IBAN format")
-        String iban
+        String iban,
+
+        TransactionCategory category
 ){}

@@ -1,6 +1,6 @@
-package com.coinguard.receipt.enums;
+package com.coinguard.common.enums;
 
-public enum ReceiptCategory{
+public enum TransactionCategory {
     FOOD_BEVERAGE,
     GROCERY,
     TRANSPORT,
@@ -10,4 +10,9 @@ public enum ReceiptCategory{
     UTILITIES,
     EDUCATION,
     TECHNOLOGY,
+    HOUSING,
+    SALARY,
+    INVESTMENT,
+    TRANSFER,
+    OTHER
 }

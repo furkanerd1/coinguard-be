@@ -5,6 +5,7 @@ import com.coinguard.budget.dto.response.BudgetResponse;
 import com.coinguard.budget.entity.Budget;
 import com.coinguard.budget.mapper.BudgetMapper;
 import com.coinguard.budget.repository.BudgetRepository;
+import com.coinguard.common.enums.TransactionCategory;
 import com.coinguard.common.exception.*;
 import com.coinguard.user.entity.User;
 import com.coinguard.user.repository.UserRepository;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -76,5 +78,41 @@ public class BudgetServiceImpl implements BudgetService {
 
         budgetRepository.delete(budget);
         log.info("Budget {} deleted successfully", budgetId);
+    }
+
+    @Override
+    public void trackExpense(Long userId, BigDecimal amount, TransactionCategory category, LocalDate transactionDate) {
+        log.info("Tracking expense for User: {}, Category: {}, Amount: {}", userId, category, amount);
+
+        var activeBudgetOpt = budgetRepository.findActiveBudgetByCategory(userId, category, transactionDate);
+
+        if (activeBudgetOpt.isPresent()) {
+            Budget budget = activeBudgetOpt.get();
+
+            BigDecimal newSpent = budget.getSpentAmount().add(amount);
+            budget.setSpentAmount(newSpent);
+
+            // todo: email notification with rabbitmq or similar
+            checkThreshold(budget);
+
+            budgetRepository.save(budget);
+            log.info("Budget updated. New Spent: {}", newSpent);
+        } else {
+            log.warn("No active budget found for category: {}", category);
+        }
+    }
+
+    private void checkThreshold(Budget budget) {
+        if (Boolean.TRUE.equals(budget.getAlertSent())) {
+            return;
+        }
+
+        Double usagePercentage = budget.getUsagePercentage();
+
+        if (usagePercentage.compareTo(Double.valueOf(budget.getAlertThreshold())) >= 0) {
+            log.warn("ALERT: Budget threshold exceeded! Usage: {}%", usagePercentage);
+            budget.setAlertSent(true);
+            // TODO: Send Email/Notification
+        }
     }
 }

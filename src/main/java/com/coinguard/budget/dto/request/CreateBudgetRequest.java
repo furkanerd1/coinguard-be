@@ -1,6 +1,6 @@
 package com.coinguard.budget.dto.request;
 
-import com.coinguard.receipt.enums.ReceiptCategory;
+import com.coinguard.common.enums.TransactionCategory;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
@@ -8,7 +8,7 @@ import java.time.LocalDate;
 
 public record CreateBudgetRequest(
         @NotNull(message = "Category cannot be null")
-        ReceiptCategory category,
+        TransactionCategory category,
 
         @NotNull(message = "Limit amount cannot be null")
         @Positive(message = "Limit amount must be positive")

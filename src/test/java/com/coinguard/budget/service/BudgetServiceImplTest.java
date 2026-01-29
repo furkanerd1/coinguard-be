@@ -5,8 +5,8 @@ import com.coinguard.budget.dto.response.BudgetResponse;
 import com.coinguard.budget.entity.Budget;
 import com.coinguard.budget.mapper.BudgetMapper;
 import com.coinguard.budget.repository.BudgetRepository;
+import com.coinguard.common.enums.TransactionCategory;
 import com.coinguard.common.exception.*;
-import com.coinguard.receipt.enums.ReceiptCategory;
 import com.coinguard.user.entity.User;
 import com.coinguard.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -51,7 +51,7 @@ class BudgetServiceImplTest {
     private CreateBudgetRequest createValidRequest() {
         LocalDate now = LocalDate.now();
         return new CreateBudgetRequest(
-                ReceiptCategory.FOOD_BEVERAGE,
+                TransactionCategory.FOOD_BEVERAGE,
                 new BigDecimal("5000.00"),
                 now,
                 now.plusDays(30),
@@ -63,7 +63,7 @@ class BudgetServiceImplTest {
         return Budget.builder()
                 .id(100L)
                 .user(user)
-                .category(ReceiptCategory.FOOD_BEVERAGE)
+                .category(TransactionCategory.FOOD_BEVERAGE)
                 .limitAmount(new BigDecimal("5000.00"))
                 .spentAmount(BigDecimal.ZERO)
                 .isActive(true)
@@ -79,7 +79,7 @@ class BudgetServiceImplTest {
         CreateBudgetRequest request = createValidRequest();
         User user = createDummyUser(userId);
         Budget budget = createDummyBudget(user);
-        BudgetResponse expectedResponse = new BudgetResponse(100L, 1L, ReceiptCategory.FOOD_BEVERAGE, BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.valueOf(5000), 0.0, LocalDate.now(), LocalDate.now().plusDays(30), true, false);
+        BudgetResponse expectedResponse = new BudgetResponse(100L, 1L, TransactionCategory.FOOD_BEVERAGE, BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.valueOf(5000), 0.0, LocalDate.now(), LocalDate.now().plusDays(30), true, false);
 
         // Mock behaviors
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
@@ -105,7 +105,7 @@ class BudgetServiceImplTest {
         // GIVEN
         Long userId = 1L;
         CreateBudgetRequest request = new CreateBudgetRequest(
-                ReceiptCategory.FOOD_BEVERAGE,
+                TransactionCategory.FOOD_BEVERAGE,
                 BigDecimal.TEN,
                 LocalDate.now().plusDays(5),
                 LocalDate.now(),
@@ -158,7 +158,7 @@ class BudgetServiceImplTest {
         // GIVEN
         Long userId = 1L;
         List<Budget> budgets = List.of(createDummyBudget(createDummyUser(userId)));
-        List<BudgetResponse> responses = List.of(new BudgetResponse(100L, 1L, ReceiptCategory.FOOD_BEVERAGE, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.TEN, 0.0, LocalDate.now(), LocalDate.now(), true, false));
+        List<BudgetResponse> responses = List.of(new BudgetResponse(100L, 1L, TransactionCategory.FOOD_BEVERAGE, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.TEN, 0.0, LocalDate.now(), LocalDate.now(), true, false));
 
         when(budgetRepository.findAllByUserId(userId)).thenReturn(budgets);
         when(budgetMapper.toBudgetResponseList(budgets)).thenReturn(responses);

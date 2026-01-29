@@ -1,6 +1,6 @@
 package com.coinguard.budget.dto.response;
 
-import com.coinguard.receipt.enums.ReceiptCategory;
+import com.coinguard.common.enums.TransactionCategory;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -8,7 +8,7 @@ import java.time.LocalDate;
 public record BudgetResponse(
         Long id,
         Long userId,
-        ReceiptCategory category,
+        TransactionCategory category,
         BigDecimal limitAmount,
         BigDecimal spentAmount,
         BigDecimal remainingAmount,

@@ -1,7 +1,7 @@
 package com.coinguard.budget.entity;
 
 import com.coinguard.common.entity.BaseEntity;
-import com.coinguard.receipt.enums.ReceiptCategory;
+import com.coinguard.common.enums.TransactionCategory;
 import com.coinguard.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,7 +28,7 @@ public class Budget extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private ReceiptCategory category;
+    private TransactionCategory category;
 
     @Version
     private Long version;

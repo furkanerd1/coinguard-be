@@ -6,6 +6,7 @@ import com.coinguard.transaction.dto.request.DepositRequest;
 import com.coinguard.transaction.dto.request.TransferRequest;
 import com.coinguard.transaction.dto.request.WithdrawRequest;
 import com.coinguard.transaction.dto.response.TransactionResponse;
+import com.coinguard.transaction.dto.response.TransactionStatsResponse;
 import com.coinguard.transaction.service.TransactionService;
 import com.coinguard.user.entity.User;
 import jakarta.validation.Valid;
@@ -14,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 
 // todo : swagger docs
@@ -60,6 +63,16 @@ public class TransactionController {
     public ResponseEntity<ApiResponse<TransactionResponse>> getByReference(
             @PathVariable String referenceNo) {
         return ResponseEntity.ok(ApiResponse.success(transactionService.getByReference(referenceNo)));
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse<TransactionStatsResponse>> getStats(
+            @RequestParam(defaultValue = "month") String period,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate,
+            @AuthenticationPrincipal User user) {
+
+        return ResponseEntity.ok(ApiResponse.success(transactionService.getTransactionStats(user.getId(), period, startDate, endDate)));
     }
 }
 

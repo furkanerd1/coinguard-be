@@ -1,5 +1,6 @@
 package com.coinguard.transaction.mapper;
 
+import com.coinguard.transaction.dto.response.ReceiptResponse;
 import com.coinguard.transaction.dto.response.TransactionResponse;
 import com.coinguard.transaction.entity.Transaction;
 import org.mapstruct.Mapper;
@@ -15,6 +16,16 @@ public interface TransactionMapper {
     @Mapping(source = "createdAt", target = "transactionDate")
     TransactionResponse toTransactionResponse(Transaction transaction);
 
+    @Mapping(target = "transactionId", source = "id")
+    @Mapping(target = "senderName", source = "fromWallet.user.fullName")
+    @Mapping(target = "senderAccount", source = "fromWallet.user.username")
+    @Mapping(target = "receiverName", source = "toWallet.user.fullName")
+    @Mapping(target = "receiverAccount", source = "toWallet.user.username")
+    @Mapping(target = "transactionDate", source = "createdAt")
+    @Mapping(target = "createdAt", expression = "java(java.time.LocalDateTime.now())")
+    @Mapping(target = "transactionFee", constant = "0.00")
+    @Mapping(target = "totalDeducted", source = "amount")
+    ReceiptResponse toReceiptResponse(Transaction transaction);
 
     @Named("mapSenderName")
     default String mapSenderName(Transaction transaction) {

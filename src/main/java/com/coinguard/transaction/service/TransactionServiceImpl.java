@@ -9,6 +9,7 @@ import com.coinguard.common.exception.WalletNotFoundException;
 import com.coinguard.transaction.dto.request.DepositRequest;
 import com.coinguard.transaction.dto.request.TransferRequest;
 import com.coinguard.transaction.dto.request.WithdrawRequest;
+import com.coinguard.transaction.dto.response.ReceiptResponse;
 import com.coinguard.transaction.dto.response.TransactionResponse;
 import com.coinguard.transaction.dto.response.TransactionStatsResponse;
 import com.coinguard.transaction.entity.Transaction;
@@ -22,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +33,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -137,8 +138,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public TransactionResponse withdraw(Long userId, WithdrawRequest request)
-    {
+    public TransactionResponse withdraw(Long userId, WithdrawRequest request) {
         Wallet wallet = findWalletForUpdate(userId);
 
         if (!wallet.hasSufficientBalance(request.amount())) {
@@ -186,12 +186,17 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional(readOnly = true)
-    public TransactionResponse getByReference(String referenceNo) {
-        Transaction transaction = transactionRepository.findByReferenceNo(referenceNo)
-                .orElseThrow(() -> new TransactionNotFoundException(referenceNo));
-
+    public TransactionResponse getByReference(String referenceNo, Long currentUserId) {
+        Transaction transaction = findTransactionSecured(referenceNo, currentUserId);
         return transactionMapper.toTransactionResponse(transaction);
     }
+
+    @Override
+    public ReceiptResponse getTransactionReceipt(String referenceNo, Long currentUserId) {
+        Transaction transaction = findTransactionSecured(referenceNo, currentUserId);
+        return transactionMapper.toReceiptResponse(transaction);
+    }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -200,30 +205,20 @@ public class TransactionServiceImpl implements TransactionService {
         LocalDateTime startDateTime = calculateStartDate(period, startDate);
         LocalDateTime endDateTime = (endDate != null && "custom".equalsIgnoreCase(period)) ? endDate.atTime(23, 59, 59) : LocalDateTime.now();
 
-
         List<Transaction> transactions = transactionRepository.findTransactionsForStats(userId, startDateTime, endDateTime);
 
         long totalCount = transactions.size();
 
-        List<Transaction> successfulTx = transactions.stream()
-                .filter(t -> t.getStatus() == TransactionStatus.COMPLETED)
-                .toList();
+        List<Transaction> successfulTx = transactions.stream().filter(t -> t.getStatus() == TransactionStatus.COMPLETED).toList();
 
         long successCount = successfulTx.size();
         long failedCount = totalCount - successCount;
 
-        BigDecimal totalAmount = successfulTx.stream()
-                .map(Transaction::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalAmount = successfulTx.stream().map(Transaction::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal avgAmount = (successCount > 0)
-                ? totalAmount.divide(BigDecimal.valueOf(successCount), 2, RoundingMode.HALF_UP)
-                : BigDecimal.ZERO;
+        BigDecimal avgAmount = (successCount > 0) ? totalAmount.divide(BigDecimal.valueOf(successCount), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
 
-        double successRate = (totalCount > 0)
-                ? (double) successCount / totalCount * 100
-                : 0.0;
-
+        double successRate = (totalCount > 0) ? (double) successCount / totalCount * 100 : 0.0;
 
         Map<TransactionType, TransactionStatsResponse.TypeStat> byType = calculateTypeStats(successfulTx);
         Map<TransactionCategory, TransactionStatsResponse.CategoryStat> byCategory = calculateCategoryStats(successfulTx);
@@ -231,6 +226,21 @@ public class TransactionServiceImpl implements TransactionService {
         return new TransactionStatsResponse(totalCount, successCount, failedCount, totalAmount, avgAmount, successRate, byType, byCategory);
     }
 
+
+    private Transaction findTransactionSecured(String referenceNo, Long userId) {
+        Transaction transaction = transactionRepository.findByReferenceNo(referenceNo)
+                .orElseThrow(() -> new TransactionNotFoundException(referenceNo));
+
+        Long senderId = (transaction.getFromWallet() != null) ? transaction.getFromWallet().getUser().getId() : null;
+        Long receiverId = (transaction.getToWallet() != null) ? transaction.getToWallet().getUser().getId() : null;
+        boolean isOwner = userId.equals(senderId) || userId.equals(receiverId);
+
+        if (!isOwner) {
+            throw new AccessDeniedException("Bu işlemi görüntüleme yetkiniz yok.");
+        }
+
+        return transaction;
+    }
 
     private LocalDateTime calculateStartDate(String period, LocalDate customStart) {
         if ("custom".equalsIgnoreCase(period) && customStart != null) {
@@ -257,7 +267,7 @@ public class TransactionServiceImpl implements TransactionService {
     private Map<TransactionCategory, TransactionStatsResponse.CategoryStat> calculateCategoryStats(List<Transaction> transactions) {
         return transactions.stream()
                 .collect(Collectors.groupingBy(
-                        Transaction::getCategory,
+                        t -> t.getCategory() == null ? TransactionCategory.OTHER : t.getCategory(),
                         Collectors.collectingAndThen(
                                 Collectors.toList(),
                                 list -> new TransactionStatsResponse.CategoryStat(

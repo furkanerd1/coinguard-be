@@ -33,4 +33,10 @@ public final class RestApiPaths {
         public static final String LOGGED_IN = "/me";
         public static final String SEARCH = "/search";
     }
+
+    public static final class Receipt {
+        private Receipt() {}
+        public static final String CTRL = API_VERSION_1 + "/receipts";
+        public static final String UPLOAD = "/upload";
+    }
 }

@@ -1,6 +1,7 @@
 package com.coinguard.common.exception.handler;
 
 import com.coinguard.common.exception.*;
+import com.coinguard.common.response.ApiResponse;
 import com.coinguard.common.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -23,6 +25,29 @@ import java.util.Map;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(FileValidationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleFileValidationException(FileValidationException ex) {
+        log.warn("File validation error: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(FileStorageException.class)
+    public ResponseEntity<ApiResponse<Void>> handleFileStorageException(FileStorageException ex) {
+        log.error("File storage error: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("Dosya yüklenirken sunucu hatası oluştu. Lütfen tekrar deneyin."));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxSizeException(MaxUploadSizeExceededException exc) {
+        log.warn("Max upload size exceeded!");
+        return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE)
+                .body(ApiResponse.error("Dosya boyutu çok büyük! Maksimum 10MB yükleyebilirsiniz."));
+    }
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentialsException(BadCredentialsException ex, HttpServletRequest request) {
@@ -78,7 +103,7 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler({WalletNotFoundException.class, TransactionNotFoundException.class, BudgetNotFoundException.class,UserNotFoundException.class})
+    @ExceptionHandler({WalletNotFoundException.class, TransactionNotFoundException.class, BudgetNotFoundException.class, UserNotFoundException.class})
     public ResponseEntity<ErrorResponse> handleResourceNotFound(RuntimeException e, HttpServletRequest request) {
         log.warn("Resource not found: {}", e.getMessage());
 

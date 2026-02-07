@@ -2,8 +2,8 @@ package com.coinguard.receipt.entity;
 
 import com.coinguard.common.entity.BaseEntity;
 import com.coinguard.common.enums.Currency;
+import com.coinguard.common.enums.TransactionCategory;
 import com.coinguard.receipt.enums.ProcessingStatus;
-import com.coinguard.receipt.enums.ReceiptCategory;
 import com.coinguard.transaction.entity.Transaction;
 import com.coinguard.wallet.entity.Wallet;
 import jakarta.persistence.*;
@@ -61,7 +61,7 @@ public class Receipt extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(length = 50)
-    private ReceiptCategory category;
+    private TransactionCategory category;
 
     @Column(name = "raw_text", columnDefinition = "TEXT")
     private String rawText;

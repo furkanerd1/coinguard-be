@@ -13,5 +13,7 @@ public interface ReceiptRepository extends JpaRepository<Receipt, Long> {
     List<Receipt> findByWalletIdOrderByCreatedAtDesc(Long toWalletId);
 
     List<Receipt> findByStatus(ProcessingStatus status);
+
+    List<Receipt> findByWallet_User_Id(Long userId);
 }
 

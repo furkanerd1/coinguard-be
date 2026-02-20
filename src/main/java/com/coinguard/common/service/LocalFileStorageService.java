@@ -32,7 +32,7 @@ public class LocalFileStorageService implements FileStorageService {
             Files.createDirectories(this.rootLocation);
             log.info("File storage location created at: {}", this.rootLocation);
         } catch (IOException ex) {
-            throw new RuntimeException("Could not create the directory where the uploaded files will be stored.", ex);
+            throw new FileStorageException("Could not create the directory where the uploaded files will be stored.", ex);
         }
     }
 

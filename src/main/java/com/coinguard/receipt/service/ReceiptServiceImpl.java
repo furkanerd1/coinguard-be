@@ -1,9 +1,11 @@
 package com.coinguard.receipt.service;
 
+import com.coinguard.common.enums.TransactionCategory;
 import com.coinguard.common.exception.FileValidationException;
 import com.coinguard.common.exception.WalletNotFoundException;
 import com.coinguard.common.service.FileStorageService;
 import com.coinguard.receipt.dto.ReceiptDto;
+import com.coinguard.receipt.dto.ai.ExtractedReceiptData;
 import com.coinguard.receipt.entity.Receipt;
 import com.coinguard.receipt.enums.ProcessingStatus;
 import com.coinguard.receipt.mapper.ReceiptMapper;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 
@@ -28,6 +31,7 @@ public class ReceiptServiceImpl implements ReceiptService {
     private final WalletRepository walletRepository;
     private final FileStorageService fileStorageService;
     private final ReceiptMapper receiptMapper;
+    private final GeminiOcrService geminiOcrService;
 
     private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList("image/jpeg", "image/png", "image/jpg");
 
@@ -53,12 +57,50 @@ public class ReceiptServiceImpl implements ReceiptService {
                 .build();
 
         Receipt savedReceipt = receiptRepository.save(receipt);
-        log.info("Receipt uploaded successfully. ID: {}, User: {}", savedReceipt.getId(), userId);
+        try {
+            //update status to processing
+            savedReceipt.setStatus(ProcessingStatus.PROCESSING);
+            receiptRepository.save(savedReceipt);
+
+            // ask to gemini to extract data from the image
+            ExtractedReceiptData aiData = geminiOcrService.extractDataFromImage(filePath);
+
+            // update receipt with extracted data
+            savedReceipt.setMerchantName(aiData.merchantName());
+            savedReceipt.setAmount(aiData.amount());
+
+            // date formatting
+            if (aiData.date() != null) {
+                savedReceipt.setReceiptDate(LocalDate.parse(aiData.date()));
+            }
+            // category mapping with fallback
+            if (aiData.category() != null) {
+                try {
+                    savedReceipt.setCategory(TransactionCategory.valueOf(aiData.category()));
+                } catch (IllegalArgumentException e) {
+                    savedReceipt.setCategory(TransactionCategory.OTHER);
+                }
+            }
+            savedReceipt.setGeminiConfidence(aiData.confidence());
+            savedReceipt.setStatus(ProcessingStatus.COMPLETED);
+        } catch (Exception e) {
+            log.error("Error during AI processing", e);
+
+            savedReceipt.setStatus(ProcessingStatus.FAILED);
+
+            String rawError = e.getMessage();
+            if (rawError != null && rawError.length() > 400) {
+                savedReceipt.setErrorMessage(rawError.substring(0, 400) + "... [Truncated]");
+            } else {
+                savedReceipt.setErrorMessage(rawError);
+            }
+        }
 
         // TODO: sende a mesege to rabbitmq to process the receipt asynchronously
         // messageQueue.send("process-receipt", savedReceipt.getId());
 
-        return receiptMapper.toDto(savedReceipt);
+        Receipt finalReceipt = receiptRepository.save(savedReceipt);
+        return receiptMapper.toDto(finalReceipt);
     }
 
     @Override

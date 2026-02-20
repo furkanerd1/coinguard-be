@@ -26,6 +26,14 @@ import java.util.Map;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(AiProcessingException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAiProcessingException(AiProcessingException ex) {
+        log.error("AI Processing Error: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("An error occurred in the AI service while reading the receipt. Please try again later."));
+    }
+
     @ExceptionHandler(FileValidationException.class)
     public ResponseEntity<ApiResponse<Void>> handleFileValidationException(FileValidationException ex) {
         log.warn("File validation error: {}", ex.getMessage());
@@ -39,14 +47,14 @@ public class GlobalExceptionHandler {
         log.error("File storage error: {}", ex.getMessage());
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Dosya yüklenirken sunucu hatası oluştu. Lütfen tekrar deneyin."));
+                .body(ApiResponse.error("A server error occurred while uploading the file. Please try again."));
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiResponse<Void>> handleMaxSizeException(MaxUploadSizeExceededException exc) {
         log.warn("Max upload size exceeded!");
         return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE)
-                .body(ApiResponse.error("Dosya boyutu çok büyük! Maksimum 10MB yükleyebilirsiniz."));
+                .body(ApiResponse.error("File size is too large! You can upload a maximum of 10MB."));
     }
 
     @ExceptionHandler(BadCredentialsException.class)

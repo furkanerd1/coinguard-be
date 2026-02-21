@@ -32,4 +32,9 @@ public class ReceiptController {
     public ResponseEntity<ApiResponse<List<ReceiptDto>>> getMyReceipts(@AuthenticationPrincipal User user) {
         return ResponseEntity.ok(ApiResponse.success(receiptService.getUserReceipts(user.getId())));
     }
+
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<ApiResponse<ReceiptDto>> approveReceipt(@AuthenticationPrincipal User user, @PathVariable("id") Long receiptId) {
+        return ResponseEntity.ok(ApiResponse.success(receiptService.approveReceipt(user.getId(), receiptId)));
+    }
 }

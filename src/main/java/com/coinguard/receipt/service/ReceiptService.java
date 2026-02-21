@@ -9,4 +9,6 @@ public interface ReceiptService {
     ReceiptDto uploadReceipt(Long userId, MultipartFile file);
 
     List<ReceiptDto> getUserReceipts(Long userId);
+
+    ReceiptDto approveReceipt(Long userId, Long receiptId);
 }

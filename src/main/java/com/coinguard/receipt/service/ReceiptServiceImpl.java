@@ -1,8 +1,7 @@
 package com.coinguard.receipt.service;
 
 import com.coinguard.common.enums.TransactionCategory;
-import com.coinguard.common.exception.FileValidationException;
-import com.coinguard.common.exception.WalletNotFoundException;
+import com.coinguard.common.exception.*;
 import com.coinguard.common.service.FileStorageService;
 import com.coinguard.receipt.dto.ReceiptDto;
 import com.coinguard.receipt.dto.ai.ExtractedReceiptData;
@@ -10,6 +9,10 @@ import com.coinguard.receipt.entity.Receipt;
 import com.coinguard.receipt.enums.ProcessingStatus;
 import com.coinguard.receipt.mapper.ReceiptMapper;
 import com.coinguard.receipt.repository.ReceiptRepository;
+import com.coinguard.transaction.entity.Transaction;
+import com.coinguard.transaction.enums.TransactionStatus;
+import com.coinguard.transaction.enums.TransactionType;
+import com.coinguard.transaction.repository.TransactionRepository;
 import com.coinguard.wallet.entity.Wallet;
 import com.coinguard.wallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
@@ -28,6 +33,7 @@ import java.util.List;
 public class ReceiptServiceImpl implements ReceiptService {
 
     private final ReceiptRepository receiptRepository;
+    private final TransactionRepository transactionRepository;
     private final WalletRepository walletRepository;
     private final FileStorageService fileStorageService;
     private final ReceiptMapper receiptMapper;
@@ -110,5 +116,55 @@ public class ReceiptServiceImpl implements ReceiptService {
         return receiptRepository.findByWallet_User_Id(userId).stream()
                 .map(receiptMapper::toDto)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public ReceiptDto approveReceipt(Long userId, Long receiptId) {
+        Receipt receipt = receiptRepository.findById(receiptId)
+                .orElseThrow(() -> new ReceiptNotFoundException(receiptId));
+
+        // Ensure the receipt belongs to the user's wallet
+        Wallet wallet = walletRepository.findById(receipt.getWallet().getId())
+                .orElseThrow(() -> new WalletNotFoundException("Wallet not found for receipt with id: " + receiptId));
+
+        // Only allow approval if the receipt is in COMPLETED status and has a valid amount
+        if (receipt.getStatus() != ProcessingStatus.COMPLETED) {
+            throw new InvalidReceiptStatusException("Only receipts with COMPLETED status can be approved. Current status: " + receipt.getStatus());
+        }
+
+        // Validate that the amount is present and greater than zero
+        if (receipt.getAmount() == null || receipt.getAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new InvalidReceiptStatusException("Cannot approve receipt with invalid amount: " + receipt.getAmount());
+        }
+
+        String merchantInfo = receipt.getMerchantName() != null ? receipt.getMerchantName() : "Unknown Merchant";
+
+        Transaction transaction = Transaction.builder()
+                .fromWallet(wallet)
+                .toWallet(null)
+                .amount(receipt.getAmount())
+                .type(TransactionType.RECEIPT_EXPENSE)
+                .status(TransactionStatus.COMPLETED)
+                .category(receipt.getCategory() != null ? receipt.getCategory() : TransactionCategory.OTHER)
+                .description(merchantInfo + " - Receipt ID: " + receiptId)
+                .currency(wallet.getCurrency()) //
+                .completedAt(LocalDateTime.now())
+                .build();
+
+        Transaction savedTransaction = transactionRepository.save(transaction);
+        if (wallet.getBalance().compareTo(receipt.getAmount()) < 0) {
+            throw new InsufficientBalanceException("Insufficient balance , Wallet : " + wallet.getBalance() + " " + wallet.getCurrency() +
+                    " exists but there is :  " + receipt.getAmount() + " " + wallet.getCurrency() + ".");
+        }
+        wallet.setBalance(wallet.getBalance().subtract(receipt.getAmount()));
+        walletRepository.save(wallet);
+
+        receipt.setStatus(ProcessingStatus.COMPLETED);
+        receipt.setTransaction(savedTransaction);
+
+        Receipt finalReceipt = receiptRepository.save(receipt);
+        log.info("Receipt {} approved. Amount {} deducted from Wallet {}", receiptId, receipt.getAmount(), wallet.getId());
+        return receiptMapper.toDto(finalReceipt);
     }
 }

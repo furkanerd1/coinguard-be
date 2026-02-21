@@ -26,6 +26,14 @@ import java.util.Map;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(InvalidReceiptStatusException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidReceiptStatusException(InvalidReceiptStatusException ex) {
+        log.warn("Invalid receipt status: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler(AiProcessingException.class)
     public ResponseEntity<ApiResponse<Void>> handleAiProcessingException(AiProcessingException ex) {
         log.error("AI Processing Error: {}", ex.getMessage());
@@ -111,7 +119,7 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler({WalletNotFoundException.class, TransactionNotFoundException.class, BudgetNotFoundException.class, UserNotFoundException.class})
+    @ExceptionHandler({WalletNotFoundException.class, TransactionNotFoundException.class, BudgetNotFoundException.class, UserNotFoundException.class,ReceiptNotFoundException.class})
     public ResponseEntity<ErrorResponse> handleResourceNotFound(RuntimeException e, HttpServletRequest request) {
         log.warn("Resource not found: {}", e.getMessage());
 

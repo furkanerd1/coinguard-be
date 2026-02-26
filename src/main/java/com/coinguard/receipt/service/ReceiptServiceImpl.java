@@ -17,6 +17,8 @@ import com.coinguard.wallet.entity.Wallet;
 import com.coinguard.wallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -116,6 +118,13 @@ public class ReceiptServiceImpl implements ReceiptService {
         return receiptRepository.findByWallet_User_Id(userId).stream()
                 .map(receiptMapper::toDto)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ReceiptDto> getUserReceipts(Long userId, Pageable pageable) {
+        return receiptRepository.findByWallet_User_Id(userId, pageable)
+                .map(receiptMapper::toDto);
     }
 
     @Override

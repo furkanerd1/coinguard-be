@@ -19,9 +19,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -160,4 +162,51 @@ class ReceiptServiceImplTest {
         assertTrue(exception.getMessage().contains("Insufficient balance"));
         verify(walletRepository, never()).save(wallet);
     }
+
+    @Test
+    @DisplayName("Should return paginated receipts successfully")
+    void getUserReceipts_Paginated_Success() {
+        // GIVEN
+        Long userId = 1L;
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Receipt receipt = new Receipt();
+        receipt.setId(1L);
+        receipt.setStatus(ProcessingStatus.COMPLETED);
+
+        Page<Receipt> receiptPage = new PageImpl<>(List.of(receipt), pageable, 1);
+        ReceiptDto receiptDto = mock(ReceiptDto.class);
+
+        when(receiptRepository.findByWallet_User_Id(userId, pageable)).thenReturn(receiptPage);
+        when(receiptMapper.toDto(receipt)).thenReturn(receiptDto);
+
+        // WHEN
+        Page<ReceiptDto> result = receiptService.getUserReceipts(userId, pageable);
+
+        // THEN
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        assertEquals(1, result.getContent().size());
+        verify(receiptRepository).findByWallet_User_Id(userId, pageable);
+    }
+
+    @Test
+    @DisplayName("Should return empty page when user has no receipts")
+    void getUserReceipts_Paginated_Empty() {
+        // GIVEN
+        Long userId = 1L;
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Receipt> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+
+        when(receiptRepository.findByWallet_User_Id(userId, pageable)).thenReturn(emptyPage);
+
+        // WHEN
+        Page<ReceiptDto> result = receiptService.getUserReceipts(userId, pageable);
+
+        // THEN
+        assertNotNull(result);
+        assertEquals(0, result.getTotalElements());
+        assertTrue(result.getContent().isEmpty());
+    }
 }
+

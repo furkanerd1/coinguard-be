@@ -2,7 +2,9 @@ package com.coinguard.transaction.controller;
 
 import com.coinguard.common.constant.RestApiPaths;
 import com.coinguard.common.response.ApiResponse;
+import com.coinguard.common.response.PageResponse;
 import com.coinguard.transaction.dto.request.DepositRequest;
+import com.coinguard.transaction.dto.request.TransactionFilterRequest;
 import com.coinguard.transaction.dto.request.TransferRequest;
 import com.coinguard.transaction.dto.request.WithdrawRequest;
 import com.coinguard.transaction.dto.response.ReceiptResponse;
@@ -12,6 +14,10 @@ import com.coinguard.transaction.service.TransactionService;
 import com.coinguard.user.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -50,11 +56,35 @@ public class TransactionController {
     }
 
     @GetMapping(RestApiPaths.Transaction.HISTORY)
-    public ResponseEntity<ApiResponse<?>> getTransactionHistory(
+    public ResponseEntity<ApiResponse<PageResponse<TransactionResponse>>> getTransactionHistory(
             @AuthenticationPrincipal User currentUser,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(ApiResponse.success(transactionService.getTransactionHistory(currentUser.getId(), page, size)));
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection) {
+
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        Page<TransactionResponse> transactionPage = transactionService.getTransactionHistory(currentUser.getId(), pageable);
+        return ResponseEntity.ok(ApiResponse.success(PageResponse.of(transactionPage)));
+    }
+
+    @GetMapping(RestApiPaths.Transaction.HISTORY + "/filter")
+    public ResponseEntity<ApiResponse<PageResponse<TransactionResponse>>> getFilteredTransactionHistory(
+            @AuthenticationPrincipal User currentUser,
+            @ModelAttribute TransactionFilterRequest filterRequest,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection) {
+
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        Page<TransactionResponse> transactionPage = transactionService.getFilteredTransactionHistory(
+                currentUser.getId(), filterRequest, pageable);
+        return ResponseEntity.ok(ApiResponse.success(PageResponse.of(transactionPage)));
     }
 
     @GetMapping("/{referenceNo}")

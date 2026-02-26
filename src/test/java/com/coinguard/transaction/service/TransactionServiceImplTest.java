@@ -5,6 +5,7 @@ import com.coinguard.common.enums.Currency;
 import com.coinguard.common.enums.TransactionCategory;
 import com.coinguard.common.exception.InsufficientBalanceException;
 import com.coinguard.common.exception.SelfTransferException;
+import com.coinguard.transaction.dto.request.TransactionFilterRequest;
 import com.coinguard.transaction.dto.request.TransferRequest;
 import com.coinguard.transaction.dto.response.ReceiptResponse;
 import com.coinguard.transaction.dto.response.TransactionResponse;
@@ -23,6 +24,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
@@ -442,4 +445,119 @@ class TransactionServiceImplTest {
         assertTrue(response.byCategory().containsKey(TransactionCategory.OTHER));
         assertEquals(1, response.byCategory().get(TransactionCategory.OTHER).count());
     }
+
+    @Test
+    @DisplayName("Should return paginated transaction history successfully")
+    void getTransactionHistory_Paginated_Success() {
+        // GIVEN
+        Long userId = 1L;
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        User user = User.builder().id(userId).build();
+        Wallet wallet = Wallet.builder().user(user).build();
+
+        Transaction transaction = Transaction.builder()
+                .id(1L)
+                .amount(BigDecimal.valueOf(100))
+                .type(TransactionType.TRANSFER)
+                .status(TransactionStatus.COMPLETED)
+                .fromWallet(wallet)
+                .toWallet(wallet)
+                .build();
+
+        Page<Transaction> transactionPage = new PageImpl<>(List.of(transaction), pageable, 1);
+
+        TransactionResponse response = new TransactionResponse(
+                1L, "User1", "User2", BigDecimal.valueOf(100),
+                Currency.TRY, TransactionType.TRANSFER, TransactionStatus.COMPLETED,
+                TransactionCategory.OTHER, "REF-123", "Test", LocalDateTime.now()
+        );
+
+        when(transactionRepository.findTransactionsByUserId(userId, pageable)).thenReturn(transactionPage);
+        when(transactionMapper.toTransactionResponse(any())).thenReturn(response);
+
+        // WHEN
+        Page<TransactionResponse> result = transactionService.getTransactionHistory(userId, pageable);
+
+        // THEN
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        assertEquals(1, result.getContent().size());
+        verify(transactionRepository).findTransactionsByUserId(userId, pageable);
+    }
+
+    @Test
+    @DisplayName("Should filter transactions successfully with all criteria")
+    void getFilteredTransactionHistory_Success() {
+        // GIVEN
+        Long userId = 1L;
+        TransactionFilterRequest filter = TransactionFilterRequest.builder()
+                .type(TransactionType.TRANSFER)
+                .status(TransactionStatus.COMPLETED)
+                .category(TransactionCategory.SHOPPING)
+                .minAmount(BigDecimal.valueOf(100))
+                .maxAmount(BigDecimal.valueOf(500))
+                .build();
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        User user = User.builder().id(userId).build();
+        Wallet wallet = Wallet.builder().user(user).build();
+
+        Transaction transaction = Transaction.builder()
+                .id(1L)
+                .amount(BigDecimal.valueOf(200))
+                .type(TransactionType.TRANSFER)
+                .status(TransactionStatus.COMPLETED)
+                .category(TransactionCategory.SHOPPING)
+                .fromWallet(wallet)
+                .toWallet(wallet)
+                .build();
+
+        Page<Transaction> transactionPage = new PageImpl<>(List.of(transaction), pageable, 1);
+
+        TransactionResponse response = new TransactionResponse(
+                1L, "User1", "User2", BigDecimal.valueOf(200),
+                Currency.TRY, TransactionType.TRANSFER, TransactionStatus.COMPLETED,
+                TransactionCategory.SHOPPING, "REF-123", "Shopping", LocalDateTime.now()
+        );
+
+        when(transactionRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(transactionPage);
+        when(transactionMapper.toTransactionResponse(any())).thenReturn(response);
+
+        // WHEN
+        Page<TransactionResponse> result = transactionService.getFilteredTransactionHistory(userId, filter, pageable);
+
+        // THEN
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        assertEquals(TransactionType.TRANSFER, result.getContent().get(0).type());
+        verify(transactionRepository).findAll(any(Specification.class), eq(pageable));
+    }
+
+    @Test
+    @DisplayName("Should return empty page when no transactions match filter")
+    void getFilteredTransactionHistory_EmptyResult() {
+        // GIVEN
+        Long userId = 1L;
+        TransactionFilterRequest filter = TransactionFilterRequest.builder()
+                .type(TransactionType.WITHDRAWAL)
+                .minAmount(BigDecimal.valueOf(10000))
+                .build();
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Transaction> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+        when(transactionRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(emptyPage);
+
+        // WHEN
+        Page<TransactionResponse> result = transactionService.getFilteredTransactionHistory(userId, filter, pageable);
+
+        // THEN
+        assertNotNull(result);
+        assertEquals(0, result.getTotalElements());
+        assertTrue(result.getContent().isEmpty());
+    }
 }
+
+

@@ -7,6 +7,7 @@ import com.coinguard.common.exception.SelfTransferException;
 import com.coinguard.common.exception.TransactionNotFoundException;
 import com.coinguard.common.exception.WalletNotFoundException;
 import com.coinguard.transaction.dto.request.DepositRequest;
+import com.coinguard.transaction.dto.request.TransactionFilterRequest;
 import com.coinguard.transaction.dto.request.TransferRequest;
 import com.coinguard.transaction.dto.request.WithdrawRequest;
 import com.coinguard.transaction.dto.response.ReceiptResponse;
@@ -17,12 +18,14 @@ import com.coinguard.transaction.enums.TransactionStatus;
 import com.coinguard.transaction.enums.TransactionType;
 import com.coinguard.transaction.mapper.TransactionMapper;
 import com.coinguard.transaction.repository.TransactionRepository;
+import com.coinguard.transaction.specification.TransactionSpecification;
 import com.coinguard.wallet.entity.Wallet;
 import com.coinguard.wallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -178,9 +181,16 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<TransactionResponse> getTransactionHistory(Long userId, int page, int size) {
-        PageRequest pageRequest = PageRequest.of(page, size);
-        return transactionRepository.findTransactionsByUserId(userId, pageRequest)
+    public Page<TransactionResponse> getTransactionHistory(Long userId, Pageable pageable) {
+        return transactionRepository.findTransactionsByUserId(userId, pageable)
+                .map(transactionMapper::toTransactionResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TransactionResponse> getFilteredTransactionHistory(Long userId, TransactionFilterRequest filterRequest, Pageable pageable) {
+        Specification<Transaction> spec = TransactionSpecification.filterTransactions(userId, filterRequest);
+        return transactionRepository.findAll(spec, pageable)
                 .map(transactionMapper::toTransactionResponse);
     }
 

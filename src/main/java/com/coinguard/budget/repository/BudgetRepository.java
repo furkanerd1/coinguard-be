@@ -2,6 +2,8 @@ package com.coinguard.budget.repository;
 
 import com.coinguard.budget.entity.Budget;
 import com.coinguard.common.enums.TransactionCategory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +17,8 @@ import java.util.Optional;
 public interface BudgetRepository extends JpaRepository<Budget, Long> {
 
     List<Budget> findAllByUserId(Long userId);
+
+    Page<Budget> findAllByUserId(Long userId, Pageable pageable);
 
     Optional<Budget> findByUserIdAndCategoryAndIsActiveTrue(Long userId, TransactionCategory category);
 

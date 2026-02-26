@@ -11,6 +11,8 @@ import com.coinguard.user.entity.User;
 import com.coinguard.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,6 +65,14 @@ public class BudgetServiceImpl implements BudgetService {
         log.info("Retrieving budgets for user {}", userId);
         List<Budget> budgets = budgetRepository.findAllByUserId(userId);
         return budgetMapper.toBudgetResponseList(budgets);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<BudgetResponse> getUserBudgets(Long userId, Pageable pageable) {
+        log.info("Retrieving paginated budgets for user {} with page {}", userId, pageable);
+        Page<Budget> budgets = budgetRepository.findAllByUserId(userId, pageable);
+        return budgets.map(budgetMapper::toBudgetResponse);
     }
 
     @Override

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -222,4 +223,54 @@ class BudgetServiceImplTest {
 
         verify(budgetRepository, never()).delete(any());
     }
+
+    @Test
+    @DisplayName("Should return paginated budgets successfully")
+    void shouldGetUserBudgets_Paginated_Success() {
+        // GIVEN
+        Long userId = 1L;
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "periodStart"));
+
+        Budget budget = createDummyBudget(createDummyUser(userId));
+        Page<Budget> budgetPage = new PageImpl<>(List.of(budget), pageable, 1);
+
+        BudgetResponse response = new BudgetResponse(
+                100L, 1L, TransactionCategory.FOOD_BEVERAGE,
+                BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.valueOf(5000),
+                0.0, LocalDate.now(), LocalDate.now().plusDays(30), true, false
+        );
+
+        when(budgetRepository.findAllByUserId(userId, pageable)).thenReturn(budgetPage);
+        when(budgetMapper.toBudgetResponse(budget)).thenReturn(response);
+
+        // WHEN
+        Page<BudgetResponse> result = budgetService.getUserBudgets(userId, pageable);
+
+        // THEN
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        assertEquals(1, result.getContent().size());
+        assertEquals(TransactionCategory.FOOD_BEVERAGE, result.getContent().get(0).category());
+        verify(budgetRepository).findAllByUserId(userId, pageable);
+    }
+
+    @Test
+    @DisplayName("Should return empty page when user has no budgets")
+    void shouldGetUserBudgets_Paginated_Empty() {
+        // GIVEN
+        Long userId = 1L;
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Budget> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+
+        when(budgetRepository.findAllByUserId(userId, pageable)).thenReturn(emptyPage);
+
+        // WHEN
+        Page<BudgetResponse> result = budgetService.getUserBudgets(userId, pageable);
+
+        // THEN
+        assertNotNull(result);
+        assertEquals(0, result.getTotalElements());
+        assertTrue(result.getContent().isEmpty());
+    }
 }
+

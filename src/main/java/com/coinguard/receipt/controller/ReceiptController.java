@@ -2,17 +2,20 @@ package com.coinguard.receipt.controller;
 
 import com.coinguard.common.constant.RestApiPaths;
 import com.coinguard.common.response.ApiResponse;
+import com.coinguard.common.response.PageResponse;
 import com.coinguard.receipt.dto.ReceiptDto;
 import com.coinguard.receipt.service.ReceiptService;
 import com.coinguard.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @RestController
 @RequestMapping(RestApiPaths.Receipt.CTRL)
@@ -29,8 +32,18 @@ public class ReceiptController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ReceiptDto>>> getMyReceipts(@AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(ApiResponse.success(receiptService.getUserReceipts(user.getId())));
+    public ResponseEntity<ApiResponse<PageResponse<ReceiptDto>>> getMyReceipts(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection) {
+
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        Page<ReceiptDto> receiptPage = receiptService.getUserReceipts(user.getId(), pageable);
+        return ResponseEntity.ok(ApiResponse.success(PageResponse.of(receiptPage)));
     }
 
     @PostMapping("/{id}/approve")

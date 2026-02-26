@@ -1,12 +1,14 @@
 package com.coinguard.transaction.service;
 
 import com.coinguard.transaction.dto.request.DepositRequest;
+import com.coinguard.transaction.dto.request.TransactionFilterRequest;
 import com.coinguard.transaction.dto.request.TransferRequest;
 import com.coinguard.transaction.dto.request.WithdrawRequest;
 import com.coinguard.transaction.dto.response.ReceiptResponse;
 import com.coinguard.transaction.dto.response.TransactionResponse;
 import com.coinguard.transaction.dto.response.TransactionStatsResponse;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 
@@ -41,11 +43,19 @@ public interface TransactionService {
     /**
      * Retrieve paginated transaction history for a user
      * @param userId User ID
-     * @param page Page number (zero-based)
-     * @param size Page size
+     * @param pageable Pageable object containing page, size, and sort information
      * @return Page of transaction responses
      */
-    Page<TransactionResponse> getTransactionHistory(Long userId, int page, int size);
+    Page<TransactionResponse> getTransactionHistory(Long userId, Pageable pageable);
+
+    /**
+     * Retrieve filtered and paginated transaction history for a user
+     * @param userId User ID
+     * @param filterRequest Filter criteria
+     * @param pageable Pageable object containing page, size, and sort information
+     * @return Page of transaction responses
+     */
+    Page<TransactionResponse> getFilteredTransactionHistory(Long userId, TransactionFilterRequest filterRequest, Pageable pageable);
 
     /**
      * Retrieve transaction details by unique reference number

@@ -32,6 +32,7 @@ public final class RestApiPaths {
         public static final String CTRL = API_VERSION_1 + "/users";
         public static final String LOGGED_IN = "/me";
         public static final String SEARCH = "/search";
+        public static final String PASSWORD = "/me/password";
     }
 
     public static final class Receipt {

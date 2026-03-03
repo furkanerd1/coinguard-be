@@ -1,14 +1,14 @@
 package com.coinguard;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.web.config.EnableSpringDataWebSupport;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO;
 
-@Disabled
 @SpringBootTest
+@ActiveProfiles("test")
 @EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO)
 class CoinguardBackendApplicationTests {
 

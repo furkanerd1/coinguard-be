@@ -1,6 +1,7 @@
 package com.coinguard.auth.controller;
 
 import com.coinguard.auth.dto.request.LoginRequest;
+import com.coinguard.auth.dto.request.RefreshTokenRequest;
 import com.coinguard.auth.dto.request.RegisterRequest;
 import com.coinguard.auth.dto.response.AuthResponse;
 import com.coinguard.auth.service.AuthService;
@@ -29,5 +30,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(ApiResponse.success(authService.login(request)));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<AuthResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(authService.refresh(request)));
     }
 }

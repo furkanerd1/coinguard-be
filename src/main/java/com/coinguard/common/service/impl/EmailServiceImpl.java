@@ -1,5 +1,6 @@
-package com.coinguard.common.service;
+package com.coinguard.common.service.impl;
 
+import com.coinguard.common.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

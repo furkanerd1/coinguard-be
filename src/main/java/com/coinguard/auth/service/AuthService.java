@@ -5,6 +5,7 @@ import com.coinguard.auth.dto.request.RefreshTokenRequest;
 import com.coinguard.auth.dto.request.RegisterRequest;
 import com.coinguard.auth.dto.response.AuthResponse;
 import com.coinguard.common.exception.AuthorizationException;
+import com.coinguard.common.service.EmailService;
 import com.coinguard.security.entity.RefreshToken;
 import com.coinguard.security.service.JwtService;
 import com.coinguard.security.service.RefreshTokenService;
@@ -30,6 +31,7 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
     private final WalletService walletService;
+    private final EmailService emailService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -53,6 +55,8 @@ public class AuthService {
 
         String token = jwtService.generateToken(savedUser);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(savedUser);
+
+        emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getFullName());
 
         return new AuthResponse(token, refreshToken.getToken(), "User registered successfully");
     }

@@ -1,8 +1,6 @@
 package com.coinguard.auth.controller;
 
-import com.coinguard.auth.dto.request.LoginRequest;
-import com.coinguard.auth.dto.request.RefreshTokenRequest;
-import com.coinguard.auth.dto.request.RegisterRequest;
+import com.coinguard.auth.dto.request.*;
 import com.coinguard.auth.dto.response.AuthResponse;
 import com.coinguard.auth.service.AuthService;
 import com.coinguard.common.constant.RestApiPaths;
@@ -35,5 +33,17 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return ResponseEntity.ok(ApiResponse.success(authService.refresh(request)));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.ok(ApiResponse.success("Password reset email sent if the account exists"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.success("Password has been reset successfully"));
     }
 }

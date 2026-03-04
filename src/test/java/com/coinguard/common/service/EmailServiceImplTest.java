@@ -1,5 +1,6 @@
 package com.coinguard.common.service;
 
+import com.coinguard.common.service.impl.EmailServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

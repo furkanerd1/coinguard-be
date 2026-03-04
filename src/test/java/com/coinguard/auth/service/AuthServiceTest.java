@@ -1,13 +1,17 @@
 package com.coinguard.auth.service;
 
+import com.coinguard.auth.dto.request.ForgotPasswordRequest;
 import com.coinguard.auth.dto.request.LoginRequest;
 import com.coinguard.auth.dto.request.RefreshTokenRequest;
 import com.coinguard.auth.dto.request.RegisterRequest;
+import com.coinguard.auth.dto.request.ResetPasswordRequest;
 import com.coinguard.auth.dto.response.AuthResponse;
 import com.coinguard.common.exception.AuthorizationException;
 import com.coinguard.common.exception.InvalidTokenException;
 import com.coinguard.common.service.EmailService;
+import com.coinguard.security.entity.PasswordResetToken;
 import com.coinguard.security.entity.RefreshToken;
+import com.coinguard.security.repository.PasswordResetTokenRepository;
 import com.coinguard.security.service.JwtService;
 import com.coinguard.security.service.RefreshTokenService;
 import com.coinguard.user.entity.User;
@@ -23,6 +27,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -46,9 +51,11 @@ class AuthServiceTest {
     private WalletService walletService;
     @Mock
     private EmailService emailService;
+    @Mock
+    private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @InjectMocks
-    private AuthService authService;
+    private AuthServiceImpl authService;
 
     @Test
     void register_ShouldReturnAuthResponse_WhenUserIsValid() {
@@ -193,7 +200,129 @@ class AuthServiceTest {
         // When & Then
         assertThrows(InvalidTokenException.class, () -> authService.refresh(request));
 
+
+        // When & Then
+        assertThrows(InvalidTokenException.class, () -> authService.refresh(request));
+
         verify(jwtService, never()).generateToken(any());
     }
+
+    @Test
+    void forgotPassword_ShouldSendEmail_WhenUserExists() {
+        // Given
+        ForgotPasswordRequest request = new ForgotPasswordRequest("ahmet@mail.com");
+        User user = User.builder()
+                .id(1L)
+                .email("ahmet@mail.com")
+                .fullName("Ahmet Yılmaz")
+                .build();
+
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(user));
+        doNothing().when(passwordResetTokenRepository).deleteByUser(user);
+        doNothing().when(emailService).sendPasswordResetEmail(anyString(), anyString());
+
+        // When
+        authService.forgotPassword(request);
+
+        // Then
+        verify(userRepository, times(1)).findByEmail(request.email());
+        verify(passwordResetTokenRepository, times(1)).deleteByUser(user);
+        verify(passwordResetTokenRepository, times(1)).save(any());
+        verify(emailService, times(1)).sendPasswordResetEmail(eq(user.getEmail()), anyString());
+    }
+
+    @Test
+    void forgotPassword_ShouldNotThrowException_WhenUserNotFound() {
+        // Given
+        ForgotPasswordRequest request = new ForgotPasswordRequest("nonexistent@mail.com");
+
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
+
+        // When & Then - Should not throw exception (security: prevent email enumeration)
+        assertDoesNotThrow(() -> authService.forgotPassword(request));
+
+        verify(userRepository, times(1)).findByEmail(request.email());
+        verify(passwordResetTokenRepository, never()).deleteByUser(any());
+        verify(passwordResetTokenRepository, never()).save(any());
+        verify(emailService, never()).sendPasswordResetEmail(anyString(), anyString());
+    }
+
+    @Test
+    void resetPassword_ShouldUpdatePassword_WhenTokenIsValid() {
+        // Given
+        ResetPasswordRequest request = new ResetPasswordRequest("valid-token", "newPassword123");
+        User user = User.builder()
+                .id(1L)
+                .email("ahmet@mail.com")
+                .password("oldEncodedPassword")
+                .build();
+
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .id(1L)
+                .token("valid-token")
+                .user(user)
+                .expiryDate(Instant.now().plus(15, ChronoUnit.MINUTES))
+                .build();
+
+        when(passwordResetTokenRepository.findByToken(request.token())).thenReturn(Optional.of(resetToken));
+        when(passwordEncoder.encode(request.newPassword())).thenReturn("newEncodedPassword");
+        when(userRepository.save(any(User.class))).thenReturn(user);
+        doNothing().when(passwordResetTokenRepository).delete(resetToken);
+
+        // When
+        authService.resetPassword(request);
+
+        // Then
+        verify(passwordResetTokenRepository, times(1)).findByToken(request.token());
+        verify(passwordEncoder, times(1)).encode(request.newPassword());
+        verify(userRepository, times(1)).save(user);
+        verify(passwordResetTokenRepository, times(1)).delete(resetToken);
+        assertEquals("newEncodedPassword", user.getPassword());
+    }
+
+    @Test
+    void resetPassword_ShouldThrowException_WhenTokenNotFound() {
+        // Given
+        ResetPasswordRequest request = new ResetPasswordRequest("invalid-token", "newPassword123");
+
+        when(passwordResetTokenRepository.findByToken(request.token())).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThrows(InvalidTokenException.class, () -> authService.resetPassword(request));
+
+        verify(passwordResetTokenRepository, times(1)).findByToken(request.token());
+        verify(passwordEncoder, never()).encode(anyString());
+        verify(userRepository, never()).save(any());
+        verify(passwordResetTokenRepository, never()).delete(any());
+    }
+
+    @Test
+    void resetPassword_ShouldThrowException_WhenTokenIsExpired() {
+        // Given
+        ResetPasswordRequest request = new ResetPasswordRequest("expired-token", "newPassword123");
+        User user = User.builder()
+                .id(1L)
+                .email("ahmet@mail.com")
+                .build();
+
+        PasswordResetToken expiredToken = PasswordResetToken.builder()
+                .id(1L)
+                .token("expired-token")
+                .user(user)
+                .expiryDate(Instant.now().minus(1, ChronoUnit.MINUTES)) // Expired 1 minute ago
+                .build();
+
+        when(passwordResetTokenRepository.findByToken(request.token())).thenReturn(Optional.of(expiredToken));
+        doNothing().when(passwordResetTokenRepository).delete(expiredToken);
+
+        // When & Then
+        assertThrows(InvalidTokenException.class, () -> authService.resetPassword(request));
+
+        verify(passwordResetTokenRepository, times(1)).findByToken(request.token());
+        verify(passwordResetTokenRepository, times(1)).delete(expiredToken);
+        verify(passwordEncoder, never()).encode(anyString());
+        verify(userRepository, never()).save(any());
+    }
 }
+
 

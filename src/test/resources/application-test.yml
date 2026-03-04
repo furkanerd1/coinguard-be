@@ -5,6 +5,18 @@ spring:
     username: sa
     password:
 
+  mail:
+    host: localhost
+    port: 3025
+    username: test@test.com
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
   jpa:
     hibernate:
       ddl-auto: create-drop

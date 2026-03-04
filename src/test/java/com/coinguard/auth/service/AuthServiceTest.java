@@ -6,6 +6,7 @@ import com.coinguard.auth.dto.request.RegisterRequest;
 import com.coinguard.auth.dto.response.AuthResponse;
 import com.coinguard.common.exception.AuthorizationException;
 import com.coinguard.common.exception.InvalidTokenException;
+import com.coinguard.common.service.EmailService;
 import com.coinguard.security.entity.RefreshToken;
 import com.coinguard.security.service.JwtService;
 import com.coinguard.security.service.RefreshTokenService;
@@ -43,6 +44,8 @@ class AuthServiceTest {
     private AuthenticationManager authenticationManager;
     @Mock
     private WalletService walletService;
+    @Mock
+    private EmailService emailService;
 
     @InjectMocks
     private AuthService authService;
@@ -51,7 +54,11 @@ class AuthServiceTest {
     void register_ShouldReturnAuthResponse_WhenUserIsValid() {
         // Given
         RegisterRequest request = new RegisterRequest("Ahmet Yılmaz", "ahmet123", "ahmet@mail.com", "123456", "+905551112233");
-        User savedUser = User.builder().id(1L).email(request.email()).build();
+        User savedUser = User.builder()
+                .id(1L)
+                .email(request.email())
+                .fullName(request.fullName())
+                .build();
         RefreshToken refreshToken = RefreshToken.builder()
                 .token("refresh-token-uuid")
                 .user(savedUser)
@@ -63,6 +70,7 @@ class AuthServiceTest {
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
         when(jwtService.generateToken(savedUser)).thenReturn("mock-access-token");
         when(refreshTokenService.createRefreshToken(savedUser)).thenReturn(refreshToken);
+        doNothing().when(emailService).sendWelcomeEmail(anyString(), anyString());
 
         // When
         AuthResponse response = authService.register(request);
@@ -75,6 +83,7 @@ class AuthServiceTest {
 
         verify(userRepository, times(1)).save(any(User.class));
         verify(walletService, times(1)).createWalletForUser(savedUser);
+        verify(emailService, times(1)).sendWelcomeEmail(savedUser.getEmail(), savedUser.getFullName());
         verify(refreshTokenService, times(1)).createRefreshToken(savedUser);
     }
 

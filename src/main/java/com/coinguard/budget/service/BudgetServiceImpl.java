@@ -7,6 +7,8 @@ import com.coinguard.budget.mapper.BudgetMapper;
 import com.coinguard.budget.repository.BudgetRepository;
 import com.coinguard.common.enums.TransactionCategory;
 import com.coinguard.common.exception.*;
+import com.coinguard.messaging.dto.NotificationMessage;
+import com.coinguard.messaging.producer.NotificationMessageProducer;
 import com.coinguard.user.entity.User;
 import com.coinguard.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class BudgetServiceImpl implements BudgetService {
     private final BudgetRepository budgetRepository;
     private final UserRepository userRepository;
     private final BudgetMapper budgetMapper;
+    private final NotificationMessageProducer notificationProducer;
 
     @Override
     @Transactional
@@ -56,7 +59,17 @@ public class BudgetServiceImpl implements BudgetService {
                 .alertSent(false)
                 .build();
 
-        return budgetMapper.toBudgetResponse(budgetRepository.save(toCreateBudget));
+        Budget savedBudget = budgetRepository.save(toCreateBudget);
+
+        // Send notification after successful budget creation
+        notificationProducer.sendNotificationMessage(new NotificationMessage(
+                userId,
+                "Budget Created",
+                String.format("Budget created for %s with limit %s", request.category(), request.limitAmount()),
+                "SUCCESS"
+        ));
+
+        return budgetMapper.toBudgetResponse(savedBudget);
     }
 
     @Override
@@ -88,6 +101,14 @@ public class BudgetServiceImpl implements BudgetService {
 
         budgetRepository.delete(budget);
         log.info("Budget {} deleted successfully", budgetId);
+
+        // Send notification after successful budget deletion
+        notificationProducer.sendNotificationMessage(new NotificationMessage(
+                userId,
+                "Budget Deleted",
+                String.format("Budget for %s has been deleted", budget.getCategory()),
+                "INFO"
+        ));
     }
 
     @Override
@@ -102,11 +123,22 @@ public class BudgetServiceImpl implements BudgetService {
             BigDecimal newSpent = budget.getSpentAmount().add(amount);
             budget.setSpentAmount(newSpent);
 
-            // todo: email notification with rabbitmq or similar
             checkThreshold(budget);
 
             budgetRepository.save(budget);
             log.info("Budget updated. New Spent: {}", newSpent);
+
+            // Send alert if budget limit exceeded (100%)
+            BigDecimal limitAmount = budget.getLimitAmount();
+            if (newSpent.compareTo(limitAmount) >= 0) {
+                notificationProducer.sendNotificationMessage(new NotificationMessage(
+                        userId,
+                        "Budget Limit Exceeded",
+                        String.format("Your %s budget limit has been exceeded. Spent: %s, Limit: %s",
+                                category, newSpent, limitAmount),
+                        "WARNING"
+                ));
+            }
         } else {
             log.warn("No active budget found for category: {}", category);
         }
@@ -122,7 +154,6 @@ public class BudgetServiceImpl implements BudgetService {
         if (usagePercentage.compareTo(Double.valueOf(budget.getAlertThreshold())) >= 0) {
             log.warn("ALERT: Budget threshold exceeded! Usage: {}%", usagePercentage);
             budget.setAlertSent(true);
-            // TODO: Send Email/Notification
         }
     }
 }

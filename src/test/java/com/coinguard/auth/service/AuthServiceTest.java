@@ -9,6 +9,8 @@ import com.coinguard.auth.dto.response.AuthResponse;
 import com.coinguard.common.exception.AuthorizationException;
 import com.coinguard.common.exception.InvalidTokenException;
 import com.coinguard.common.service.EmailService;
+import com.coinguard.messaging.producer.EmailMessageProducer;
+import com.coinguard.messaging.producer.NotificationMessageProducer;
 import com.coinguard.security.entity.PasswordResetToken;
 import com.coinguard.security.entity.RefreshToken;
 import com.coinguard.security.repository.PasswordResetTokenRepository;
@@ -52,6 +54,10 @@ class AuthServiceTest {
     @Mock
     private EmailService emailService;
     @Mock
+    private EmailMessageProducer emailMessageProducer;
+    @Mock
+    private NotificationMessageProducer notificationMessageProducer;
+    @Mock
     private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @InjectMocks
@@ -77,7 +83,7 @@ class AuthServiceTest {
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
         when(jwtService.generateToken(savedUser)).thenReturn("mock-access-token");
         when(refreshTokenService.createRefreshToken(savedUser)).thenReturn(refreshToken);
-        doNothing().when(emailService).sendWelcomeEmail(anyString(), anyString());
+        doNothing().when(emailMessageProducer).sendEmailMessage(any());
 
         // When
         AuthResponse response = authService.register(request);
@@ -90,7 +96,7 @@ class AuthServiceTest {
 
         verify(userRepository, times(1)).save(any(User.class));
         verify(walletService, times(1)).createWalletForUser(savedUser);
-        verify(emailService, times(1)).sendWelcomeEmail(savedUser.getEmail(), savedUser.getFullName());
+        verify(emailMessageProducer, times(1)).sendEmailMessage(any());
         verify(refreshTokenService, times(1)).createRefreshToken(savedUser);
     }
 
@@ -124,6 +130,8 @@ class AuthServiceTest {
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(mockUser));
         when(jwtService.generateToken(mockUser)).thenReturn("login-token");
         when(refreshTokenService.createRefreshToken(mockUser)).thenReturn(refreshToken);
+        doNothing().when(notificationMessageProducer).sendNotificationMessage(any());
+        doNothing().when(emailMessageProducer).sendEmailMessage(any());
 
         // When
         AuthResponse response = authService.login(request);
@@ -135,6 +143,8 @@ class AuthServiceTest {
         assertEquals("Login successful", response.message());
 
         verify(refreshTokenService, times(1)).createRefreshToken(mockUser);
+        verify(notificationMessageProducer, times(1)).sendNotificationMessage(any());
+        verify(emailMessageProducer, times(1)).sendEmailMessage(any());
     }
 
     @Test
@@ -219,7 +229,7 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(user));
         doNothing().when(passwordResetTokenRepository).deleteByUser(user);
-        doNothing().when(emailService).sendPasswordResetEmail(anyString(), anyString());
+        doNothing().when(emailMessageProducer).sendEmailMessage(any());
 
         // When
         authService.forgotPassword(request);
@@ -228,7 +238,7 @@ class AuthServiceTest {
         verify(userRepository, times(1)).findByEmail(request.email());
         verify(passwordResetTokenRepository, times(1)).deleteByUser(user);
         verify(passwordResetTokenRepository, times(1)).save(any());
-        verify(emailService, times(1)).sendPasswordResetEmail(eq(user.getEmail()), anyString());
+        verify(emailMessageProducer, times(1)).sendEmailMessage(any());
     }
 
     @Test
@@ -244,7 +254,7 @@ class AuthServiceTest {
         verify(userRepository, times(1)).findByEmail(request.email());
         verify(passwordResetTokenRepository, never()).deleteByUser(any());
         verify(passwordResetTokenRepository, never()).save(any());
-        verify(emailService, never()).sendPasswordResetEmail(anyString(), anyString());
+        verify(emailMessageProducer, never()).sendEmailMessage(any());
     }
 
     @Test

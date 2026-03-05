@@ -6,6 +6,8 @@ import com.coinguard.common.exception.InsufficientBalanceException;
 import com.coinguard.common.exception.SelfTransferException;
 import com.coinguard.common.exception.TransactionNotFoundException;
 import com.coinguard.common.exception.WalletNotFoundException;
+import com.coinguard.messaging.dto.NotificationMessage;
+import com.coinguard.messaging.producer.NotificationMessageProducer;
 import com.coinguard.transaction.dto.request.DepositRequest;
 import com.coinguard.transaction.dto.request.TransactionFilterRequest;
 import com.coinguard.transaction.dto.request.TransferRequest;
@@ -50,6 +52,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final WalletRepository walletRepository;
     private final TransactionMapper transactionMapper;
     private final BudgetService budgetService;
+    private final NotificationMessageProducer notificationProducer;
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -103,6 +106,22 @@ public class TransactionServiceImpl implements TransactionService {
         } catch (Exception e) {
             log.error("Failed to update budget for transfer: {}", e.getMessage());
         }
+
+        notificationProducer.sendNotificationMessage(NotificationMessage.builder()
+                .userId(senderWallet.getUser().getId())
+                .title("Transfer Successful!")
+                .message(String.format("You sent %s %s to user %s.",
+                         request.amount(), senderWallet.getCurrency(),receiverWallet.getUser().getFullName()))
+                .type("SUCCESS")
+                .build());
+
+        notificationProducer.sendNotificationMessage(NotificationMessage.builder()
+                .userId(receiverWallet.getUser().getId())
+                .title("New Transfer Received!")
+                .message(String.format("You received %s %s from user %s in your account.",
+                        request.amount(), receiverWallet.getCurrency(),senderWallet.getUser().getFullName()))
+                .type("INFO")
+                .build());
         return transactionMapper.toTransactionResponse(savedTransaction);
     }
 
@@ -135,7 +154,17 @@ public class TransactionServiceImpl implements TransactionService {
                 .completedAt(LocalDateTime.now())
                 .build();
 
-        return transactionMapper.toTransactionResponse(transactionRepository.save(transaction));
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        // Send notification after successful deposit
+        notificationProducer.sendNotificationMessage(new NotificationMessage(
+                userId,
+                "Deposit Successful",
+                String.format("%s %s has been deposited to your account", request.amount(), wallet.getCurrency()),
+                "SUCCESS"
+        ));
+
+        return transactionMapper.toTransactionResponse(savedTransaction);
     }
 
 
@@ -175,6 +204,14 @@ public class TransactionServiceImpl implements TransactionService {
         } catch (Exception e) {
             log.error("Failed to update budget for withdrawal: {}", e.getMessage());
         }
+
+        // Send notification after successful withdrawal
+        notificationProducer.sendNotificationMessage(new NotificationMessage(
+                userId,
+                "Withdrawal Successful",
+                String.format("%s %s has been withdrawn from your account", request.amount(), wallet.getCurrency()),
+                "INFO"
+        ));
 
         return transactionMapper.toTransactionResponse(savedTransaction);
     }

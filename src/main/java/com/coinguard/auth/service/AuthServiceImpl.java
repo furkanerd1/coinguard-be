@@ -4,8 +4,10 @@ import com.coinguard.auth.dto.request.*;
 import com.coinguard.auth.dto.response.AuthResponse;
 import com.coinguard.common.exception.AuthorizationException;
 import com.coinguard.common.exception.InvalidTokenException;
-import com.coinguard.common.exception.UserNotFoundException;
-import com.coinguard.common.service.EmailService;
+import com.coinguard.messaging.dto.EmailMessage;
+import com.coinguard.messaging.dto.NotificationMessage;
+import com.coinguard.messaging.producer.EmailMessageProducer;
+import com.coinguard.messaging.producer.NotificationMessageProducer;
 import com.coinguard.security.entity.PasswordResetToken;
 import com.coinguard.security.entity.RefreshToken;
 import com.coinguard.security.repository.PasswordResetTokenRepository;
@@ -29,7 +31,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class AuthServiceImpl implements AuthService{
+public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -37,7 +39,8 @@ public class AuthServiceImpl implements AuthService{
     private final RefreshTokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
     private final WalletService walletService;
-    private final EmailService emailService;
+    private final EmailMessageProducer emailMessageProducer;
+    private final NotificationMessageProducer notificationMessageProducer;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Transactional
@@ -63,7 +66,12 @@ public class AuthServiceImpl implements AuthService{
         String token = jwtService.generateToken(savedUser);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(savedUser);
 
-        emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getFullName());
+        emailMessageProducer.sendEmailMessage(new EmailMessage(
+                savedUser.getEmail(),
+                null,
+                savedUser.getFullName(),
+                "WELCOME"
+        ));
 
         return new AuthResponse(token, refreshToken.getToken(), "User registered successfully");
     }
@@ -77,6 +85,22 @@ public class AuthServiceImpl implements AuthService{
 
         String token = jwtService.generateToken(user);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
+        // Send notification for new login
+        notificationMessageProducer.sendNotificationMessage(new NotificationMessage(
+                user.getId(),
+                "New Login Alert",
+                String.format("New login detected to your account at %s", java.time.LocalDateTime.now()),
+                "WARNING"
+        ));
+
+        // Send email for new login
+        emailMessageProducer.sendEmailMessage(new EmailMessage(
+                user.getEmail(),
+                "New Login Alert",
+                user.getFullName(),
+                "NEW_LOGIN"
+        ));
 
         return new AuthResponse(token, refreshToken.getToken(), "Login successful");
     }
@@ -117,7 +141,12 @@ public class AuthServiceImpl implements AuthService{
         passwordResetTokenRepository.save(resetToken);
 
         // send mail
-        emailService.sendPasswordResetEmail(user.getEmail(), token);
+        emailMessageProducer.sendEmailMessage(new EmailMessage(
+                user.getEmail(),
+                null,
+                token,
+                "RESET_PASSWORD"
+        ));
     }
 
     @Override

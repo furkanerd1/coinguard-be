@@ -5,6 +5,7 @@ import com.coinguard.common.enums.Currency;
 import com.coinguard.common.enums.TransactionCategory;
 import com.coinguard.common.exception.InsufficientBalanceException;
 import com.coinguard.common.exception.SelfTransferException;
+import com.coinguard.messaging.producer.NotificationMessageProducer;
 import com.coinguard.transaction.dto.request.TransactionFilterRequest;
 import com.coinguard.transaction.dto.request.TransferRequest;
 import com.coinguard.transaction.dto.response.ReceiptResponse;
@@ -53,6 +54,8 @@ class TransactionServiceImplTest {
     private TransactionMapper transactionMapper;
     @Mock
     private BudgetService budgetService;
+    @Mock
+    private NotificationMessageProducer notificationProducer;
 
     private Wallet createWallet(Long userId, BigDecimal balance) {
         User user = User.builder()
@@ -94,6 +97,7 @@ class TransactionServiceImplTest {
 
         when(walletRepository.save(any(Wallet.class))).thenAnswer(i -> i.getArgument(0));
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> i.getArgument(0));
+        doNothing().when(notificationProducer).sendNotificationMessage(any());
 
         when(transactionMapper.toTransactionResponse(any(Transaction.class)))
                 .thenReturn(new TransactionResponse(
@@ -124,7 +128,7 @@ class TransactionServiceImplTest {
         verify(walletRepository).findByUserIdForUpdate(receiverId);
         verify(walletRepository, times(2)).save(any(Wallet.class));
         verify(transactionRepository).save(any(Transaction.class));
-
+        verify(notificationProducer, times(2)).sendNotificationMessage(any()); // sender + receiver
         verify(budgetService).trackExpense(eq(senderId), eq(transferAmount), eq(TransactionCategory.SHOPPING), any());
     }
 
@@ -179,6 +183,7 @@ class TransactionServiceImplTest {
         when(walletRepository.findByUserIdForUpdate(senderId)).thenReturn(Optional.of(senderWallet));
         when(walletRepository.findByUserIdForUpdate(receiverId)).thenReturn(Optional.of(receiverWallet));
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> i.getArgument(0));
+        doNothing().when(notificationProducer).sendNotificationMessage(any());
 
         when(transactionMapper.toTransactionResponse(any(Transaction.class)))
                 .thenReturn(new TransactionResponse(
@@ -205,6 +210,7 @@ class TransactionServiceImplTest {
         assertNotNull(response);
         assertEquals(new BigDecimal("400.00"), senderWallet.getBalance());
         verify(transactionRepository).save(any(Transaction.class));
+        verify(notificationProducer, times(2)).sendNotificationMessage(any());
     }
 
     @Test

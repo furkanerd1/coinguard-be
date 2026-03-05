@@ -7,6 +7,7 @@ import com.coinguard.budget.mapper.BudgetMapper;
 import com.coinguard.budget.repository.BudgetRepository;
 import com.coinguard.common.enums.TransactionCategory;
 import com.coinguard.common.exception.*;
+import com.coinguard.messaging.producer.NotificationMessageProducer;
 import com.coinguard.user.entity.User;
 import com.coinguard.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -38,6 +39,8 @@ class BudgetServiceImplTest {
     private UserRepository userRepository;
     @Mock
     private BudgetMapper budgetMapper;
+    @Mock
+    private NotificationMessageProducer notificationProducer;
 
     // --- Helper Methods to Create Dummy Data ---
 
@@ -88,6 +91,7 @@ class BudgetServiceImplTest {
                 .thenReturn(Optional.empty());
         when(budgetRepository.save(any(Budget.class))).thenReturn(budget);
         when(budgetMapper.toBudgetResponse(budget)).thenReturn(expectedResponse);
+        doNothing().when(notificationProducer).sendNotificationMessage(any());
 
         // WHEN
         BudgetResponse result = budgetService.createBudget(userId, request);
@@ -95,6 +99,7 @@ class BudgetServiceImplTest {
         // THEN
         assertNotNull(result);
         assertEquals(expectedResponse.id(), result.id());
+        verify(notificationProducer).sendNotificationMessage(any());
 
         verify(userRepository).findById(userId);
         verify(budgetRepository).save(any(Budget.class));
@@ -183,12 +188,14 @@ class BudgetServiceImplTest {
         Budget budget = createDummyBudget(user);
 
         when(budgetRepository.findById(budgetId)).thenReturn(Optional.of(budget));
+        doNothing().when(notificationProducer).sendNotificationMessage(any());
 
         // WHEN
         budgetService.deleteBudget(userId, budgetId);
 
         // THEN
         verify(budgetRepository).delete(budget);
+        verify(notificationProducer).sendNotificationMessage(any());
     }
 
     @Test

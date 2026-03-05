@@ -1,6 +1,7 @@
 package com.coinguard.common.service;
 
 import com.coinguard.common.exception.FileValidationException;
+import com.coinguard.common.service.impl.LocalFileStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

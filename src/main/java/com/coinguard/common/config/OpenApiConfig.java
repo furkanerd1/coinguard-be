@@ -15,11 +15,9 @@ import org.springframework.context.annotation.Configuration;
 @OpenAPIDefinition(
         info = @io.swagger.v3.oas.annotations.info.Info(
                 contact = @Contact(
-                        name = "Coinguard Support",
-                        email = "contact@coinguard.com",
-                        url = "https://coinguard.com"
+
                 ),
-                description = "Coinguard Crypto Wallet Management API",
+                description = "CoinGuard Core Banking & Wallet API",
                 title = "Coinguard API",
                 version = "1.0.0"
         ),

@@ -1,7 +1,8 @@
-package com.coinguard.common.service;
+package com.coinguard.common.service.impl;
 
 import com.coinguard.common.exception.FileStorageException;
 import com.coinguard.common.exception.FileValidationException;
+import com.coinguard.common.service.FileStorageService;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

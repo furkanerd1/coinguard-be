@@ -3,6 +3,7 @@ package com.coinguard.receipt.service;
 import com.coinguard.common.enums.Currency;
 import com.coinguard.common.exception.FileValidationException;
 import com.coinguard.common.service.FileStorageService;
+import com.coinguard.messaging.producer.NotificationMessageProducer;
 import com.coinguard.receipt.dto.ReceiptDto;
 import com.coinguard.receipt.dto.ai.ExtractedReceiptData;
 import com.coinguard.receipt.entity.Receipt;
@@ -42,6 +43,7 @@ class ReceiptServiceImplTest {
     @Mock private FileStorageService fileStorageService;
     @Mock private ReceiptMapper receiptMapper;
     @Mock private GeminiOcrService geminiOcrService;
+    @Mock private NotificationMessageProducer notificationProducer;
 
     @Test
     @DisplayName("Upload: Should upload and process receipt successfully via AI")
@@ -88,6 +90,7 @@ class ReceiptServiceImplTest {
         when(fileStorageService.storeFile(any(), eq("receipts"))).thenReturn("path.jpg");
         when(receiptRepository.save(any(Receipt.class))).thenReturn(savedReceipt);
         when(geminiOcrService.extractDataFromImage(anyString())).thenThrow(new RuntimeException("API Quota Exceeded"));
+        doNothing().when(notificationProducer).sendNotificationMessage(any());
 
         // WHEN
         receiptService.uploadReceipt(1L, file);
@@ -95,6 +98,7 @@ class ReceiptServiceImplTest {
         // THEN
         assertEquals(ProcessingStatus.FAILED, savedReceipt.getStatus());
         assertTrue(savedReceipt.getErrorMessage().contains("API Quota Exceeded"));
+        verify(notificationProducer, times(2)).sendNotificationMessage(any()); // Processing start + failure
     }
 
     @Test
@@ -125,6 +129,7 @@ class ReceiptServiceImplTest {
         when(transactionRepository.save(any(Transaction.class))).thenReturn(new Transaction());
         when(receiptRepository.save(any(Receipt.class))).thenReturn(receipt);
         when(receiptMapper.toDto(any())).thenReturn(mock(ReceiptDto.class));
+        doNothing().when(notificationProducer).sendNotificationMessage(any());
 
         // WHEN
         receiptService.approveReceipt(1L, receiptId);
@@ -133,6 +138,7 @@ class ReceiptServiceImplTest {
         assertEquals(BigDecimal.valueOf(700), wallet.getBalance());
         verify(walletRepository).save(wallet);
         verify(transactionRepository).save(any(Transaction.class));
+        verify(notificationProducer).sendNotificationMessage(any());
     }
 
     @Test

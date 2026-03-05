@@ -10,6 +10,7 @@ import com.coinguard.common.exception.AuthorizationException;
 import com.coinguard.common.exception.InvalidTokenException;
 import com.coinguard.common.service.EmailService;
 import com.coinguard.messaging.producer.EmailMessageProducer;
+import com.coinguard.messaging.producer.NotificationMessageProducer;
 import com.coinguard.security.entity.PasswordResetToken;
 import com.coinguard.security.entity.RefreshToken;
 import com.coinguard.security.repository.PasswordResetTokenRepository;
@@ -54,6 +55,8 @@ class AuthServiceTest {
     private EmailService emailService;
     @Mock
     private EmailMessageProducer emailMessageProducer;
+    @Mock
+    private NotificationMessageProducer notificationMessageProducer;
     @Mock
     private PasswordResetTokenRepository passwordResetTokenRepository;
 
@@ -127,6 +130,8 @@ class AuthServiceTest {
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(mockUser));
         when(jwtService.generateToken(mockUser)).thenReturn("login-token");
         when(refreshTokenService.createRefreshToken(mockUser)).thenReturn(refreshToken);
+        doNothing().when(notificationMessageProducer).sendNotificationMessage(any());
+        doNothing().when(emailMessageProducer).sendEmailMessage(any());
 
         // When
         AuthResponse response = authService.login(request);
@@ -138,6 +143,8 @@ class AuthServiceTest {
         assertEquals("Login successful", response.message());
 
         verify(refreshTokenService, times(1)).createRefreshToken(mockUser);
+        verify(notificationMessageProducer, times(1)).sendNotificationMessage(any());
+        verify(emailMessageProducer, times(1)).sendEmailMessage(any());
     }
 
     @Test

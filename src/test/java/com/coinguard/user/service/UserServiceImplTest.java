@@ -2,6 +2,8 @@ package com.coinguard.user.service;
 
 import com.coinguard.common.exception.InvalidPasswordException;
 import com.coinguard.common.exception.UserNotFoundException;
+import com.coinguard.messaging.producer.EmailMessageProducer;
+import com.coinguard.messaging.producer.NotificationMessageProducer;
 import com.coinguard.user.dto.request.UpdatePasswordRequest;
 import com.coinguard.user.dto.request.UpdateUserRequest;
 import com.coinguard.user.dto.response.UserResponse;
@@ -39,6 +41,12 @@ class UserServiceImplTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private NotificationMessageProducer notificationProducer;
+
+    @Mock
+    private EmailMessageProducer emailProducer;
 
 
     @Test
@@ -212,12 +220,16 @@ class UserServiceImplTest {
 
         User user = User.builder()
                 .id(userId)
+                .email("test@example.com")
+                .fullName("Test User")
                 .password("encodedOldPassword")
                 .build();
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("oldPassword123", "encodedOldPassword")).thenReturn(true);
         when(passwordEncoder.encode("newPassword456")).thenReturn("encodedNewPassword");
+        doNothing().when(notificationProducer).sendNotificationMessage(any());
+        doNothing().when(emailProducer).sendEmailMessage(any());
 
         // WHEN
         userService.updatePassword(userId, request);
@@ -225,6 +237,8 @@ class UserServiceImplTest {
         // THEN
         verify(userRepository).save(user);
         verify(passwordEncoder).encode("newPassword456");
+        verify(notificationProducer).sendNotificationMessage(any());
+        verify(emailProducer).sendEmailMessage(any());
     }
 
     @Test

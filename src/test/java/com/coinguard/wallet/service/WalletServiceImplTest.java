@@ -1,6 +1,7 @@
 package com.coinguard.wallet.service;
 
 import com.coinguard.common.exception.WalletNotFoundException;
+import com.coinguard.messaging.producer.NotificationMessageProducer;
 import com.coinguard.user.entity.User;
 import com.coinguard.wallet.dto.response.WalletResponse;
 import com.coinguard.wallet.entity.Wallet;
@@ -15,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -32,6 +34,9 @@ class WalletServiceImplTest {
 
     @Mock
     private WalletMapper walletMapper;
+
+    @Mock
+    private NotificationMessageProducer notificationProducer;
 
     //Helper Method
     private User createDummyUser() {
@@ -156,8 +161,20 @@ class WalletServiceImplTest {
     @Test
     @DisplayName("Should call repository to reset daily limits")
     void shouldResetDailyLimits() {
+        // GIVEN
+        User user1 = createDummyUser();
+        User user2 = User.builder().id(2L).username("user2").build();
+        Wallet wallet1 = createDummyWallet(user1);
+        Wallet wallet2 = createDummyWallet(user2);
+
+        when(walletRepository.findAll()).thenReturn(List.of(wallet1, wallet2));
+        doNothing().when(notificationProducer).sendNotificationMessage(any());
+
         // WHEN
         walletService.resetDailyLimits();
+
+        // THEN
         verify(walletRepository).resetAllDailyLimits(any(LocalDate.class));
+        verify(notificationProducer, times(2)).sendNotificationMessage(any());
     }
 }

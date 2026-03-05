@@ -2,6 +2,8 @@ package com.coinguard.wallet.service;
 
 import com.coinguard.common.enums.Currency;
 import com.coinguard.common.exception.WalletNotFoundException;
+import com.coinguard.messaging.dto.NotificationMessage;
+import com.coinguard.messaging.producer.NotificationMessageProducer;
 import com.coinguard.user.entity.User;
 import com.coinguard.wallet.dto.response.WalletResponse;
 import com.coinguard.wallet.entity.Wallet;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +25,7 @@ public class WalletServiceImpl implements WalletService{
 
     private final WalletRepository walletRepository;
     private final WalletMapper walletMapper;
+    private final NotificationMessageProducer notificationProducer;
 
     @Override
     @Transactional(readOnly = true)
@@ -41,7 +45,6 @@ public class WalletServiceImpl implements WalletService{
         if (walletRepository.existsByUserId(user.getId())) {
             log.warn("Wallet already exists for user ID: {}", user.getId());
             throw new IllegalStateException("Wallet already exists for user: " + user.getId());
-            // Todo: Create custom exception for existing wallet scenario
         }
 
         Wallet wallet = Wallet.builder()
@@ -71,5 +74,16 @@ public class WalletServiceImpl implements WalletService{
     public void resetDailyLimits() {
         log.info("Starting daily limit reset for all wallets");
         walletRepository.resetAllDailyLimits(LocalDate.now());
+
+        // Send notification to all users about daily limits reset
+        List<Wallet> allWallets = walletRepository.findAll();
+        for (Wallet wallet : allWallets) {
+            notificationProducer.sendNotificationMessage(new NotificationMessage(
+                    wallet.getUser().getId(),
+                    "Daily Limits Reset",
+                    "Your daily transaction limits have been reset",
+                    "INFO"
+            ));
+        }
     }
 }

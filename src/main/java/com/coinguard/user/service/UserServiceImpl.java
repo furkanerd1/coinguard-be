@@ -2,6 +2,10 @@ package com.coinguard.user.service;
 
 import com.coinguard.common.exception.InvalidPasswordException;
 import com.coinguard.common.exception.UserNotFoundException;
+import com.coinguard.messaging.dto.EmailMessage;
+import com.coinguard.messaging.dto.NotificationMessage;
+import com.coinguard.messaging.producer.EmailMessageProducer;
+import com.coinguard.messaging.producer.NotificationMessageProducer;
 import com.coinguard.user.dto.request.UpdatePasswordRequest;
 import com.coinguard.user.dto.request.UpdateUserRequest;
 import com.coinguard.user.dto.response.UserResponse;
@@ -24,6 +28,8 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final NotificationMessageProducer notificationProducer;
+    private final EmailMessageProducer emailProducer;
 
     @Override
     @Transactional(readOnly = true)
@@ -66,6 +72,15 @@ public class UserServiceImpl implements UserService {
         }
 
         User updatedUser = userRepository.save(user);
+
+        // Send notification after successful profile update
+        notificationProducer.sendNotificationMessage(new NotificationMessage(
+                userId,
+                "Profile Updated",
+                "Your profile information has been updated successfully",
+                "INFO"
+        ));
+
         return userMapper.toUserResponse(updatedUser);
     }
 
@@ -85,5 +100,21 @@ public class UserServiceImpl implements UserService {
 
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
+
+        // Send security alert notification
+        notificationProducer.sendNotificationMessage(new NotificationMessage(
+                userId,
+                "Security Alert",
+                "Your password has been changed successfully",
+                "WARNING"
+        ));
+
+        // Send email notification
+        emailProducer.sendEmailMessage(new EmailMessage(
+                user.getEmail(),
+                "Password Changed",
+                user.getFullName(),
+                "PASSWORD_CHANGED"
+        ));
     }
 }

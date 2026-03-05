@@ -3,6 +3,8 @@ package com.coinguard.receipt.service;
 import com.coinguard.common.enums.TransactionCategory;
 import com.coinguard.common.exception.*;
 import com.coinguard.common.service.FileStorageService;
+import com.coinguard.messaging.dto.NotificationMessage;
+import com.coinguard.messaging.producer.NotificationMessageProducer;
 import com.coinguard.receipt.dto.ReceiptDto;
 import com.coinguard.receipt.dto.ai.ExtractedReceiptData;
 import com.coinguard.receipt.entity.Receipt;
@@ -23,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -40,6 +41,7 @@ public class ReceiptServiceImpl implements ReceiptService {
     private final FileStorageService fileStorageService;
     private final ReceiptMapper receiptMapper;
     private final GeminiOcrService geminiOcrService;
+    private final NotificationMessageProducer notificationProducer;
 
     private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList("image/jpeg", "image/png", "image/jpg");
 
@@ -65,6 +67,15 @@ public class ReceiptServiceImpl implements ReceiptService {
                 .build();
 
         Receipt savedReceipt = receiptRepository.save(receipt);
+
+        // Send notification for receipt processing start
+        notificationProducer.sendNotificationMessage(new NotificationMessage(
+                userId,
+                "Receipt Processing",
+                String.format("Your receipt '%s' is being processed", file.getOriginalFilename()),
+                "INFO"
+        ));
+
         try {
             //update status to processing
             savedReceipt.setStatus(ProcessingStatus.PROCESSING);
@@ -102,11 +113,15 @@ public class ReceiptServiceImpl implements ReceiptService {
             } else {
                 savedReceipt.setErrorMessage(rawError);
             }
+
+            // Send notification for receipt processing failure
+            notificationProducer.sendNotificationMessage(new NotificationMessage(
+                    userId,
+                    "Receipt Processing Failed",
+                    "Failed to process receipt. Please try again or enter details manually.",
+                    "ERROR"
+            ));
         }
-
-        // TODO: sende a mesege to rabbitmq to process the receipt asynchronously
-        // messageQueue.send("process-receipt", savedReceipt.getId());
-
         Receipt finalReceipt = receiptRepository.save(savedReceipt);
         return receiptMapper.toDto(finalReceipt);
     }
@@ -174,6 +189,16 @@ public class ReceiptServiceImpl implements ReceiptService {
 
         Receipt finalReceipt = receiptRepository.save(receipt);
         log.info("Receipt {} approved. Amount {} deducted from Wallet {}", receiptId, receipt.getAmount(), wallet.getId());
+
+        // Send notification after successful receipt approval
+        notificationProducer.sendNotificationMessage(new NotificationMessage(
+                userId,
+                "Receipt Approved",
+                String.format("Receipt from %s for %s %s has been approved and processed",
+                        receipt.getMerchantName(), receipt.getAmount(), wallet.getCurrency()),
+                "SUCCESS"
+        ));
+
         return receiptMapper.toDto(finalReceipt);
     }
 }

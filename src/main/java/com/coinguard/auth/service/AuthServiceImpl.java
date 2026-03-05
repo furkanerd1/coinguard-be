@@ -5,7 +5,9 @@ import com.coinguard.auth.dto.response.AuthResponse;
 import com.coinguard.common.exception.AuthorizationException;
 import com.coinguard.common.exception.InvalidTokenException;
 import com.coinguard.messaging.dto.EmailMessage;
+import com.coinguard.messaging.dto.NotificationMessage;
 import com.coinguard.messaging.producer.EmailMessageProducer;
+import com.coinguard.messaging.producer.NotificationMessageProducer;
 import com.coinguard.security.entity.PasswordResetToken;
 import com.coinguard.security.entity.RefreshToken;
 import com.coinguard.security.repository.PasswordResetTokenRepository;
@@ -38,6 +40,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final WalletService walletService;
     private final EmailMessageProducer emailMessageProducer;
+    private final NotificationMessageProducer notificationMessageProducer;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Transactional
@@ -82,6 +85,22 @@ public class AuthServiceImpl implements AuthService {
 
         String token = jwtService.generateToken(user);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
+        // Send notification for new login
+        notificationMessageProducer.sendNotificationMessage(new NotificationMessage(
+                user.getId(),
+                "New Login Alert",
+                String.format("New login detected to your account at %s", java.time.LocalDateTime.now()),
+                "WARNING"
+        ));
+
+        // Send email for new login
+        emailMessageProducer.sendEmailMessage(new EmailMessage(
+                user.getEmail(),
+                "New Login Alert",
+                user.getFullName(),
+                "NEW_LOGIN"
+        ));
 
         return new AuthResponse(token, refreshToken.getToken(), "Login successful");
     }
